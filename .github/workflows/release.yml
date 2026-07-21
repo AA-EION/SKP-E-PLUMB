@@ -1,0 +1,37 @@
+name: Release
+
+# Publishes the .rbz to a GitHub Release when a version tag is pushed.
+#   git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Run tests
+        run: ruby tools/test_logic.rb
+
+      - name: Build .rbz
+        run: ./tools/build_rbz.sh
+
+      - name: Create GitHub Release with .rbz
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SKP E-Plumb ${{ github.ref_name }}
+          files: |
+            dist/SKP-E-Plumb.rbz
+            dist/SKP-E-Plumb-*.rbz
+          generate_release_notes: true
