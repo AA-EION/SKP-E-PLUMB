@@ -14,22 +14,18 @@ VERSION="$(ruby -e 'v=File.read("skp_e_plumb/version.rb")[/VERSION\s*=\s*.(\d+\.
 DIST="$ROOT/dist"
 mkdir -p "$DIST"
 
-STABLE="$DIST/SKP-E-Plumb.rbz"
-VERSIONED="$DIST/SKP-E-Plumb-v${VERSION}.rbz"
-
-rm -f "$STABLE" "$VERSIONED"
+# A single artifact. The version lives in the Release tag, so the file name
+# stays stable ("download SKP-E-Plumb.rbz from the latest release").
+RBZ="$DIST/SKP-E-Plumb.rbz"
+rm -f "$DIST"/*.rbz
 
 # Only ship the plugin payload — never tools/, .git, dist, docs, tests.
-zip -r -X "$STABLE" \
+zip -r -X "$RBZ" \
     skp_e_plumb.rb \
     skp_e_plumb \
     -x '*.DS_Store' -x '__MACOSX*' -x '*/.git*' >/dev/null
 
-cp "$STABLE" "$VERSIONED"
-
-echo "Built:"
-echo "  $STABLE"
-echo "  $VERSIONED"
+echo "Built $RBZ (v${VERSION})"
 echo
 echo "Contents:"
-unzip -l "$STABLE"
+unzip -l "$RBZ"

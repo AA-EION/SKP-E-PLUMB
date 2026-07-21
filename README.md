@@ -16,7 +16,7 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 > (NEC / NOM / RETIE, etc.).*
 
 - Licencia: **GPL-3.0-or-later**
-- Versión: **1.0.0**
+- Versión: **1.1.0**
 - Formato de instalación: **`.rbz`**
 
 ---
@@ -51,10 +51,13 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 - **Cajas**:
   - **Plexo** (cajas plásticas IP55 para intemperie / PVC).
   - **Rawelt** (condulets tipo **C, LB, LL, LR, T, X** y cajas **FS / FD**).
+- **Edición por anclas**: reabre cualquier tubería creada y **mueve, inserta o
+  borra vértices, extiéndela y cambia curva↔codo por vértice**; la geometría y
+  el BOM se **reconstruyen** al aplicar.
 - **BOM en vivo** con exportación a **CSV** y **HTML**, agrupado por categoría,
   tipo y medida.
-- Barra de herramientas, menú e íconos propios. Todo el modelado se hace dentro
-  de una sola operación *undo-able*.
+- Barra de herramientas, menú, íconos y **Diagnóstico** propios. Todo el
+  modelado se hace dentro de una sola operación *undo-able*.
 
 ---
 
@@ -74,12 +77,15 @@ Diámetros comerciales: `1/2"`, `3/4"`, `1"`, `1-1/4"`, `1-1/2"`, `2"`,
 
 ## 📦 Instalación
 
-1. Descarga el archivo **`SKP-E-Plumb.rbz`** (de
-   [Releases](../../releases) o de la carpeta [`dist/`](dist/)).
+1. Descarga **`SKP-E-Plumb.rbz`** desde la
+   [última Release](../../releases/latest). El `.rbz` se publica únicamente en
+   las Releases (no se versiona dentro del repositorio).
 2. En SketchUp: **Ventana → Administrador de extensiones → Instalar extensión…**
    (*Window → Extension Manager → Install Extension…*).
 3. Selecciona el `.rbz` y confirma.
 4. Aparecerá el menú **Extensiones → SKP E-Plumb** y su **barra de herramientas**.
+   Si no ves algo, usa **Extensiones → SKP E-Plumb → Diagnóstico…** para
+   comprobar la carga y abrir Ajustes.
 
 > Compatible con SketchUp 2017 en adelante (usa `HtmlDialog`), probado para
 > **SketchUp 2026** en macOS y Windows.
@@ -104,6 +110,21 @@ Diámetros comerciales: `1/2"`, `3/4"`, `1"`, `1-1/4"`, `1-1/2"`, `2"`,
 5. Para **cajas**: pulsa **▧ Colocar caja** y haz clic donde la quieras (se
    monta sobre la cara si hay una).
 6. Abre **📋 Ver BOM** y expórtalo a **CSV** o **HTML**.
+
+### Editar una tubería existente (por anclas)
+
+Pulsa **Editar tubería** y haz clic en una tubería creada con el plugin. Aparecen
+las **anclas** de su trazado:
+
+| Acción | Cómo |
+|--------|------|
+| Mover un vértice | **Arrastra** su ancla |
+| Insertar un vértice | **Clic sobre un segmento** |
+| Extender la tubería | **Clic en espacio vacío** (se agrega al extremo más cercano) |
+| Borrar un vértice | Coloca el cursor sobre el ancla y pulsa **Retroceso/Supr** |
+| Cambiar curva ↔ codo de un vértice | Cursor sobre el ancla + **Alt / Option** |
+| Aplicar cambios | **Enter** (reconstruye geometría y BOM) |
+| Cancelar | **Esc** |
 
 ---
 
@@ -154,6 +175,7 @@ skp_e_plumb/
   bom.rb                  # Motor de BOM y exportación CSV/HTML
   settings.rb             # Preferencias persistentes
   conduit_tool.rb         # Herramienta interactiva de tubería
+  edit_tool.rb            # Edición por anclas de tuberías existentes
   box_tool.rb             # Herramienta de cajas
   ui_dialogs.rb           # Diálogos HtmlDialog (Ajustes y BOM)
   resources/icons/*.png   # Íconos de la barra de herramientas
@@ -168,6 +190,8 @@ tools/                    # Scripts de build, íconos y pruebas
   segmentados). No modela roscas ni el interior hueco del tubo.
 - El conteo de tubos asume reaprovechamiento de retazos (estimación optimista);
   el BOM muestra también los metros para que el estimador ajuste.
+- La edición por anclas reconstruye la tubería completa al aplicar (no edita
+  pieza por pieza).
 - Próximo: numeración de circuitos, longitud de conductores, cédulas por caja,
   reporte por planta.
 
@@ -181,9 +205,10 @@ your **stock pipe length**. It supports **PVC, EMT, IMC and Galvanized/RMC**
 with correct joints (set-screw/compression for EMT, threaded for IMC/RMC,
 solvent-weld for PVC), **field bends vs. factory elbows** (toggle with
 `Alt`/`Option` while drawing), configurable **bend radius** (NEC minimums),
-**insulated and grounding bushings**, and **Plexo / Rawelt boxes**. Install the
-`.rbz` via *Extension Manager*. Export the BOM to CSV/HTML. Licensed under
-**GPL-3.0-or-later**.
+**insulated and grounding bushings**, and **Plexo / Rawelt boxes**. Existing
+runs are **editable by anchors** (drag/insert/delete vertices, extend, toggle
+bend/elbow per vertex, then rebuild). Install the `.rbz` via *Extension
+Manager*. Export the BOM to CSV/HTML. Licensed under **GPL-3.0-or-later**.
 
 ---
 

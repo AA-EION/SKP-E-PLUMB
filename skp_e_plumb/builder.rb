@@ -22,14 +22,20 @@ module SkpEPlumb
   module Builder
     TINY = 1.0e-4
 
+    # Attribute dictionary used to store the editable definition of a run
+    # (its centreline, per-vertex bend modes and settings). Kept SEPARATE from
+    # Bom::DICT so the BOM scanner still descends into the container.
+    RUN_DICT = 'SKP_E_PLUMB_RUN'
+
     module_function
 
     # Public entry point. `s` is an options hash with symbol keys:
     #   :type :size :stock_m :bend_radius_mm :termination :connection :segments
-    #   :terminate_start :terminate_end (booleans)
-    # Returns the container group or nil.
-    def build_run(model, raw_pts, vertex_modes, s)
-      pts = GeomUtil.clean_points(raw_pts)
+    #   :bend_mode :terminate_start :terminate_end
+    # `modes` is a per-vertex Array (modes[i] is the bend mode for vertex i);
+    # nil entries fall back to s[:bend_mode]. Returns the container group or nil.
+    def build_run(model, raw_pts, modes, s)
+      pts, modes = clean_path(raw_pts, modes)
       return nil if pts.length < 2
 
       type = s[:type]
@@ -61,7 +67,7 @@ module SkpEPlumb
       }
 
       n = pts.length
-      features = compute_features(pts, vertex_modes, bend_r, s[:bend_mode])
+      features = compute_features(pts, modes, bend_r, s[:bend_mode])
 
       prev = pts[0]
       (1..n - 2).each do |i|
@@ -83,14 +89,85 @@ module SkpEPlumb
       add_termination(g, pts[0], pts[0] - pts[1], ctx, s[:termination]) if s[:terminate_start]
       add_termination(g, pts[n - 1], pts[n - 1] - pts[n - 2], ctx, s[:termination]) if s[:terminate_end]
 
+      store_run_meta(container, pts, modes, s)
       container
+    end
+
+    # Dedupe consecutive coincident points, carrying the matching bend mode so
+    # the modes array stays aligned with the point array.
+    def clean_path(raw_pts, modes)
+      out_pts = []
+      out_modes = []
+      raw_pts.each_with_index do |p, i|
+        next unless out_pts.empty? || out_pts.last.distance(p) > 1.0e-6
+
+        out_pts << p
+        out_modes << (modes && modes[i])
+      end
+      [out_pts, out_modes]
+    end
+
+    # ---- editable run metadata -------------------------------------------
+
+    # Persist the run definition on its container so it can be re-opened and
+    # edited by anchors later.
+    def store_run_meta(group, pts, modes, s)
+      group.set_attribute(RUN_DICT, 'run', true)
+      group.set_attribute(RUN_DICT, 'px', pts.map { |p| p.x.to_f })
+      group.set_attribute(RUN_DICT, 'py', pts.map { |p| p.y.to_f })
+      group.set_attribute(RUN_DICT, 'pz', pts.map { |p| p.z.to_f })
+      group.set_attribute(RUN_DICT, 'modes', pts.each_index.map { |i| (modes[i] || s[:bend_mode] || 'field').to_s })
+      group.set_attribute(RUN_DICT, 'type', s[:type])
+      group.set_attribute(RUN_DICT, 'size', s[:size])
+      group.set_attribute(RUN_DICT, 'stock_m', s[:stock_m].to_f)
+      group.set_attribute(RUN_DICT, 'bend_radius_mm', s[:bend_radius_mm].to_f)
+      group.set_attribute(RUN_DICT, 'termination', s[:termination].to_s)
+      group.set_attribute(RUN_DICT, 'connection', (s[:connection] || '').to_s)
+      group.set_attribute(RUN_DICT, 'segments', s[:segments].to_i)
+      group.set_attribute(RUN_DICT, 'bend_mode', (s[:bend_mode] || 'field').to_s)
+      group.set_attribute(RUN_DICT, 'terminate_start', s[:terminate_start] ? true : false)
+      group.set_attribute(RUN_DICT, 'terminate_end', s[:terminate_end] ? true : false)
+      group
+    end
+
+    def run?(group)
+      group.respond_to?(:attribute_dictionary) &&
+        !group.attribute_dictionary(RUN_DICT).nil?
+    end
+
+    # Read the editable definition back. Returns { pts:, modes:, s: } or nil.
+    def read_run_meta(group)
+      return nil unless run?(group)
+
+      px = group.get_attribute(RUN_DICT, 'px')
+      py = group.get_attribute(RUN_DICT, 'py')
+      pz = group.get_attribute(RUN_DICT, 'pz')
+      return nil unless px && py && pz && px.length >= 2
+
+      pts = px.each_index.map { |i| Geom::Point3d.new(px[i], py[i], pz[i]) }
+      modes = group.get_attribute(RUN_DICT, 'modes') || []
+      conn = group.get_attribute(RUN_DICT, 'connection').to_s
+
+      s = {
+        type: group.get_attribute(RUN_DICT, 'type', 'EMT'),
+        size: group.get_attribute(RUN_DICT, 'size', '3/4'),
+        stock_m: group.get_attribute(RUN_DICT, 'stock_m', 3.0).to_f,
+        bend_radius_mm: group.get_attribute(RUN_DICT, 'bend_radius_mm', 114.3).to_f,
+        termination: group.get_attribute(RUN_DICT, 'termination', 'std'),
+        connection: conn.empty? ? nil : conn.to_sym,
+        segments: group.get_attribute(RUN_DICT, 'segments', 24).to_i,
+        bend_mode: group.get_attribute(RUN_DICT, 'bend_mode', 'field'),
+        terminate_start: group.get_attribute(RUN_DICT, 'terminate_start', true),
+        terminate_end: group.get_attribute(RUN_DICT, 'terminate_end', true)
+      }
+      { pts: pts, modes: modes, s: s }
     end
 
     # ---- feature computation ---------------------------------------------
 
     # For every interior vertex, decide the trimmed tangent points and the
     # fillet arc, clamping the radius so it fits the shorter adjacent leg.
-    def compute_features(pts, vertex_modes, bend_r, default_mode)
+    def compute_features(pts, modes, bend_r, default_mode)
       features = {}
       n = pts.length
       (1..n - 2).each do |i|
@@ -120,7 +197,7 @@ module SkpEPlumb
         arc, _setback, t_in, t_out = GeomUtil.fillet_arc(v, dinn, doutn, r)
         next if arc.nil?
 
-        mode = (vertex_modes && vertex_modes[i - 1]) || default_mode
+        mode = (modes && modes[i]) || default_mode
         mode = mode.to_sym
         features[i] = { t_in: t_in, t_out: t_out, arc: arc, mode: mode,
                         deg: ang * 180.0 / Math::PI }

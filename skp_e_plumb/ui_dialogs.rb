@@ -29,12 +29,17 @@ module SkpEPlumb
         dialog_title: 'SKP E-Plumb — Ajustes',
         preferences_key: 'com.aaeion.skpeplumb.settings',
         scrollable: true, resizable: true,
-        width: 380, height: 620, min_width: 340, min_height: 420,
+        width: 380, height: 640, min_width: 340, min_height: 420,
         style: Sketchup::HtmlDialog::STYLE_DIALOG
       )
-      @settings_dlg.set_html(settings_html)
+      # Register callbacks BEFORE loading the page so the sketchup.* bindings
+      # exist as soon as the HTML runs.
       register_settings_callbacks(@settings_dlg)
+      @settings_dlg.set_html(settings_html)
       @settings_dlg.show
+      @settings_dlg.center if @settings_dlg.respond_to?(:center)
+    rescue StandardError => e
+      report_error(e, 'Ajustes')
     end
 
     def register_settings_callbacks(dlg)
@@ -243,9 +248,19 @@ module SkpEPlumb
         width: 720, height: 540, min_width: 460, min_height: 300,
         style: Sketchup::HtmlDialog::STYLE_DIALOG
       )
-      @bom_dlg.set_html(bom_dialog_html(data))
       register_bom_callbacks(@bom_dlg)
+      @bom_dlg.set_html(bom_dialog_html(data))
       @bom_dlg.show
+      @bom_dlg.center if @bom_dlg.respond_to?(:center)
+    rescue StandardError => e
+      report_error(e, 'BOM')
+    end
+
+    # Show any failure in a message box so silent errors become reportable.
+    def report_error(err, context)
+      trace = (err.backtrace || [])[0, 6].join("\n")
+      UI.messagebox("SKP E-Plumb — error en #{context}:\n\n#{err.class}: " \
+                    "#{err.message}\n\n#{trace}")
     end
 
     def register_bom_callbacks(dlg)
