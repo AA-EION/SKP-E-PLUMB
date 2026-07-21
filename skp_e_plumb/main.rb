@@ -126,7 +126,7 @@ module SkpEPlumb
             "SKP E-Plumb v#{SkpEPlumb::VERSION}",
             "Ruby: #{RUBY_VERSION}",
             "SketchUp: #{Sketchup.version}",
-            "HtmlDialog: #{defined?(Sketchup::HtmlDialog) ? 'disponible' : 'NO disponible'}",
+            "HtmlDialog: #{defined?(UI::HtmlDialog) ? 'disponible' : 'NO disponible'}",
             "Módulos: Catalog=#{defined?(Catalog) ? 'ok' : '-'}, " \
               "Builder=#{defined?(Builder) ? 'ok' : '-'}, " \
               "UIDialogs=#{defined?(UIDialogs) ? 'ok' : '-'}",

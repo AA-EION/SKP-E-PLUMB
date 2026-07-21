@@ -25,12 +25,12 @@ module SkpEPlumb
         return
       end
 
-      @settings_dlg = Sketchup::HtmlDialog.new(
+      @settings_dlg = UI::HtmlDialog.new(
         dialog_title: 'SKP E-Plumb — Ajustes',
         preferences_key: 'com.aaeion.skpeplumb.settings',
         scrollable: true, resizable: true,
         width: 380, height: 640, min_width: 340, min_height: 420,
-        style: Sketchup::HtmlDialog::STYLE_DIALOG
+        style: UI::HtmlDialog::STYLE_DIALOG
       )
       # Register callbacks BEFORE loading the page so the sketchup.* bindings
       # exist as soon as the HTML runs.
@@ -241,12 +241,12 @@ module SkpEPlumb
         return
       end
 
-      @bom_dlg = Sketchup::HtmlDialog.new(
+      @bom_dlg = UI::HtmlDialog.new(
         dialog_title: 'SKP E-Plumb — BOM',
         preferences_key: 'com.aaeion.skpeplumb.bom',
         scrollable: true, resizable: true,
         width: 720, height: 540, min_width: 460, min_height: 300,
-        style: Sketchup::HtmlDialog::STYLE_DIALOG
+        style: UI::HtmlDialog::STYLE_DIALOG
       )
       register_bom_callbacks(@bom_dlg)
       @bom_dlg.set_html(bom_dialog_html(data))
