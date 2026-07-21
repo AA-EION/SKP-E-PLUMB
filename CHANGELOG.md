@@ -4,6 +4,15 @@ Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.1.1] - 2026-07-21
+
+### Corregido
+- **Los diálogos (Ajustes / BOM) no abrían**: se usaba `Sketchup::HtmlDialog`
+  cuando la clase correcta de la API es `UI::HtmlDialog`, lo que lanzaba
+  `NameError: uninitialized constant Sketchup::HtmlDialog`. Ahora abren.
+- Auditadas todas las referencias de la API (`Sketchup::*`, `UI::*`, `Geom::*`)
+  para descartar otros namespaces incorrectos.
+
 ## [1.1.0] - 2026-07-21
 
 ### Añadido
@@ -47,5 +56,6 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Diálogos `HtmlDialog` de Ajustes y BOM, barra de herramientas e íconos.
 - Empaquetado `.rbz`, pruebas de lógica offline y flujo de publicación en CI.
 
+[1.1.1]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.1.1
 [1.1.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.1.0
 [1.0.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.0.0
