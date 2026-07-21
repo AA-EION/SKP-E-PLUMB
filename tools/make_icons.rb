@@ -56,6 +56,29 @@ class Canvas
     end
   end
 
+  def line(x0, y0, x1, y1, rgba, thick = 1)
+    x0 = x0.round; y0 = y0.round; x1 = x1.round; y1 = y1.round
+    dx = (x1 - x0).abs
+    dy = -(y1 - y0).abs
+    sx = x0 < x1 ? 1 : -1
+    sy = y0 < y1 ? 1 : -1
+    err = dx + dy
+    loop do
+      thick.times { |ox| thick.times { |oy| set(x0 + ox, y0 + oy, rgba) } }
+      break if x0 == x1 && y0 == y1
+
+      e2 = 2 * err
+      if e2 >= dy
+        err += dy
+        x0 += sx
+      end
+      if e2 <= dx
+        err += dx
+        y0 += sy
+      end
+    end
+  end
+
   def ring(cx, cy, rad, inner, rgba)
     (((cy - rad))..(cy + rad)).each do |y|
       (((cx - rad))..(cx + rad)).each do |x|
@@ -98,7 +121,8 @@ THEMES = {
   'box'      => [44, 122, 123, 255],
   'bend'     => [76, 81, 191, 255],
   'bom'      => [47, 133, 90, 255],
-  'settings' => [74, 85, 104, 255]
+  'settings' => [74, 85, 104, 255],
+  'edit'     => [200, 120, 40, 255]
 }.freeze
 
 def glyph(canvas, name, s)
@@ -126,6 +150,17 @@ def glyph(canvas, name, s)
   when 'settings'
     canvas.ring(u.call(12), u.call(12), u.call(8), u.call(4), WHITE)
     canvas.disc(u.call(12), u.call(12), u.call(2), WHITE)
+  when 'edit'
+    # centreline with square anchors (edit-by-anchors)
+    nodes = [[5, 16], [11, 8], [15, 15], [19, 7]]
+    thick = [(1.5 * s).round, 1].max
+    nodes.each_cons(2) do |(ax, ay), (bx, by)|
+      canvas.line(u.call(ax), u.call(ay), u.call(bx), u.call(by), WHITE, thick)
+    end
+    nodes.each do |(px, py)|
+      canvas.fill_rect(u.call(px) - thick, u.call(py) - thick,
+                       u.call(px) + thick, u.call(py) + thick, WHITE)
+    end
   end
 end
 

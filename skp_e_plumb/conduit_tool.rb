@@ -194,7 +194,6 @@ module SkpEPlumb
       end
 
       model = Sketchup.active_model
-      n = @pts.length
       s = {
         type: Settings.type, size: Settings.size, stock_m: Settings.stock_m,
         bend_radius_mm: Settings.bend_radius_mm, termination: Settings.get('termination'),
@@ -203,10 +202,9 @@ module SkpEPlumb
         terminate_start: Settings.termination != :none,
         terminate_end: Settings.termination != :none
       }
-      interior_modes = n > 2 ? @modes[1..(n - 2)] : []
 
       model.start_operation('SKP E-Plumb — Tubería', true)
-      group = Builder.build_run(model, @pts, interior_modes, s)
+      group = Builder.build_run(model, @pts, @modes, s)
       if group
         model.commit_operation
         @flash = 'Tubería creada. BOM actualizado.'

@@ -9,6 +9,7 @@ Thumbs.db
 # SketchUp backups
 *.skb
 
-# Build output is versioned intentionally (dist/*.rbz), but ignore temp zips
+# Build output — the .rbz is published only on GitHub Releases, never committed
+/dist/
 /tmp/
 *.tmp

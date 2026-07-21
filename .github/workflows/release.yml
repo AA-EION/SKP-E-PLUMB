@@ -41,7 +41,5 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           name: SKP E-Plumb ${{ github.event.inputs.tag || github.ref_name }}
-          files: |
-            dist/SKP-E-Plumb.rbz
-            dist/SKP-E-Plumb-*.rbz
+          files: dist/SKP-E-Plumb.rbz
           generate_release_notes: true
