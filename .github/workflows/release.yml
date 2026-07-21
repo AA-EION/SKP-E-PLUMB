@@ -1,11 +1,20 @@
 name: Release
 
-# Publishes the .rbz to a GitHub Release when a version tag is pushed.
-#   git tag v1.0.0 && git push origin v1.0.0
+# Publishes the .rbz to a GitHub Release. Two ways to trigger:
+#   1. Push a version tag:   git tag v1.0.0 && git push origin v1.0.0
+#   2. Manual dispatch:      Actions -> Release -> Run workflow (enter a tag)
+# The manual path also creates the tag, so it works even where tag pushes are
+# restricted.
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag/version to release (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
 
 permissions:
   contents: write
@@ -30,7 +39,8 @@ jobs:
       - name: Create GitHub Release with .rbz
         uses: softprops/action-gh-release@v2
         with:
-          name: SKP E-Plumb ${{ github.ref_name }}
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: SKP E-Plumb ${{ github.event.inputs.tag || github.ref_name }}
           files: |
             dist/SKP-E-Plumb.rbz
             dist/SKP-E-Plumb-*.rbz
