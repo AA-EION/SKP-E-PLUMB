@@ -4,6 +4,20 @@ Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.3.0] - 2026-07-22
+
+### Cambiado
+- **Caja automática (RETIE) ahora interrumpe la tubería**: el tubo **llega a la
+  caja**, se coloca la **terminación** (conector / contratuerca + bushing
+  normal o de aterrizaje, según la opción) y la tubería **continúa al otro
+  lado** con su propia terminación. La caja **reemplaza** esa curva (el cambio
+  de dirección ocurre en la caja). Antes se colocaba solo como marcador.
+
+### Corregido
+- **Orientación de cajas en paredes verticales** (antes solo el piso quedaba
+  bien): la base se construye explícitamente (profundidad → normal de la cara,
+  eje +Y hacia arriba). Verificado con pruebas unitarias de la base ortonormal.
+
 ## [1.2.0] - 2026-07-22
 
 ### Añadido
@@ -86,6 +100,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Diálogos `HtmlDialog` de Ajustes y BOM, barra de herramientas e íconos.
 - Empaquetado `.rbz`, pruebas de lógica offline y flujo de publicación en CI.
 
+[1.3.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.3.0
 [1.2.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.2.0
 [1.1.2]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.1.2
 [1.1.1]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.1.1

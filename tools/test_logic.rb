@@ -6,6 +6,7 @@ $LOAD_PATH.unshift(File.expand_path('..', __dir__))
 
 require 'skp_e_plumb/catalog'
 require 'skp_e_plumb/bom'
+require 'skp_e_plumb/geom_util'
 
 include SkpEPlumb
 
@@ -73,6 +74,34 @@ check('grounding bushing counted') { find(data, 'Bushing aterrizaje')[:qty] == 1
 check('box counted') { find(data, 'Caja')[:qty] == 1 }
 check('part_total equals raw count') { data[:part_total] == raw.length }
 check('lines sorted with Tubería first') { data[:lines].first[:category] == 'Tubería' }
+
+# ---- surface orientation (box placement) -----------------------------------
+GU = GeomUtil
+def dot3(a, b) = a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+def approx3(a, b, tol = 1e-9) = (0..2).all? { |i| (a[i] - b[i]).abs < tol }
+
+floor = GU.surface_basis([0.0, 0.0, 1.0])
+check('floor: depth axis is +Z') { approx3(floor[2], [0, 0, 1]) }
+check('floor: wide face is horizontal') { floor[0][2].abs < 1e-9 && floor[1][2].abs < 1e-9 }
+
+wall_x = GU.surface_basis([1.0, 0.0, 0.0])
+check('wall +X: depth axis is the wall normal') { approx3(wall_x[2], [1, 0, 0]) }
+check('wall +X: up axis points up (+Z)') { approx3(wall_x[1], [0, 0, 1]) }
+check('wall +X: side axis is horizontal') { wall_x[0][2].abs < 1e-9 }
+
+wall_y = GU.surface_basis([0.0, 1.0, 0.0])
+check('wall +Y: depth axis is the wall normal') { approx3(wall_y[2], [0, 1, 0]) }
+check('wall +Y: up axis points up (+Z)') { approx3(wall_y[1], [0, 0, 1]) }
+
+check('basis orthonormal & right-handed (wall)') do
+  x, y, z = wall_x
+  dot3(x, y).abs < 1e-9 && dot3(x, z).abs < 1e-9 && dot3(y, z).abs < 1e-9 &&
+    approx3(GU.cross3(x, y), z, 1e-9)
+end
+check('degenerate normal falls back to identity') do
+  b = GU.surface_basis([0.0, 0.0, 0.0])
+  approx3(b[0], [1, 0, 0]) && approx3(b[1], [0, 1, 0]) && approx3(b[2], [0, 0, 1])
+end
 
 # ---- exports ---------------------------------------------------------------
 csv = Bom.to_csv(data)
