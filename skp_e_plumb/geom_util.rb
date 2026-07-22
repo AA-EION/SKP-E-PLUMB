@@ -160,6 +160,48 @@ module SkpEPlumb
       end
     end
 
+    # ---- surface orientation ---------------------------------------------
+    # Build an orthonormal basis for placing a box flat on a surface whose
+    # outward normal is given. Local +Z (the box depth) aligns to the normal,
+    # local +Y points "up" along the surface (world up projected), and local +X
+    # is horizontal. Pure-array maths so it can be unit tested without SketchUp.
+    # Returns [xaxis, yaxis, zaxis] as 3-element arrays.
+    def surface_basis(normal3)
+      n = norm3(normal3)
+      return [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]] if n == [0.0, 0.0, 0.0]
+
+      up = [0.0, 0.0, 1.0]
+      ref = parallel3?(n, up) ? [1.0, 0.0, 0.0] : up
+      x = norm3(cross3(ref, n))
+      y = norm3(cross3(n, x))
+      [x, y, n]
+    end
+
+    # Geom::Transformation that places a box flat on the surface at `origin`.
+    def surface_transform(origin, normal)
+      x, y, z = surface_basis([normal.x.to_f, normal.y.to_f, normal.z.to_f])
+      Geom::Transformation.axes(origin,
+                                Geom::Vector3d.new(*x),
+                                Geom::Vector3d.new(*y),
+                                Geom::Vector3d.new(*z))
+    end
+
+    def cross3(a, b)
+      [a[1] * b[2] - a[2] * b[1],
+       a[2] * b[0] - a[0] * b[2],
+       a[0] * b[1] - a[1] * b[0]]
+    end
+
+    def norm3(v)
+      m = Math.sqrt(v[0]**2 + v[1]**2 + v[2]**2)
+      m < 1.0e-12 ? [0.0, 0.0, 0.0] : [v[0] / m, v[1] / m, v[2] / m]
+    end
+
+    def parallel3?(a, b)
+      c = cross3(a, b)
+      Math.sqrt(c[0]**2 + c[1]**2 + c[2]**2) < 1.0e-6
+    end
+
     # A rectangular box (w x h x d, millimetre extents already converted to
     # inches) centred on `origin`, aligned to axes xaxis/yaxis. Depth is along
     # the box's local z. Returns the group.

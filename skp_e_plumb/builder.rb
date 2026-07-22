@@ -74,20 +74,48 @@ module SkpEPlumb
       # cut into stock-length tube pieces, and a coupling straddles every joint
       # (one tube ends, the next begins, the union sits on top). A premade elbow
       # is its own fitting, joined to the tubes with a coupling on each side.
+      box_key = s[:box_key]
+      box_spec = box_key && Catalog::BOXES[box_key]
+      auto_on = s[:auto_box] && !box_spec.nil?
+      every = (s[:auto_box_every] || 2).to_i
+      every = 2 if every < 1
+
       current = [pts[0]]
+      bends_since_box = 0
       (1..n - 2).each do |i|
         f = features[i]
         next if f.nil? # collinear vertex, absorbed into the straight run
 
-        current << f[:t_in]
-        if f[:mode] == :field
+        if auto_on && bends_since_box >= every
+          # RETIE pull box: the tube reaches the box, terminates (connector /
+          # locknut + bushing, or grounding bushing), and the run continues out
+          # the other side with its own termination. The box replaces the curve.
+          din = safe_dir(pts[i] - pts[i - 1])
+          dout = safe_dir(pts[i + 1] - pts[i])
+          li = (pts[i] - pts[i - 1]).length
+          lo = (pts[i + 1] - pts[i]).length
+          inset = [GeomUtil.mm([box_spec[:w], box_spec[:h]].min) / 2.0,
+                   0.4 * li, 0.4 * lo].min
+
+          current << pts[i].offset(din, -inset)
+          render_continuous_path(g, current, ctx)
+          add_termination(g, pts[i].offset(din, -inset), din, ctx, s[:termination])
+          drop_box(model, g, pts[i], box_spec, box_key, Geom::Vector3d.new(0, 0, 1))
+          add_termination(g, pts[i].offset(dout, inset), dout.reverse, ctx, s[:termination])
+          current = [pts[i].offset(dout, inset)]
+          bends_since_box = 0
+        elsif f[:mode] == :field
+          current << f[:t_in]
           current.concat(f[:arc][1..-1]) # bend is part of the continuous tube
+          bends_since_box += 1
         else
+          current << f[:t_in]
           render_continuous_path(g, current, ctx)
           add_premade_elbow(g, f[:arc], f[:deg], ctx)
           add_coupling(g, f[:t_in], seg_dir(f[:arc], :start), ctx)
           add_coupling(g, f[:t_out], seg_dir(f[:arc], :end), ctx)
           current = [f[:t_out]]
+          bends_since_box += 1
         end
       end
       current << pts[n - 1]
@@ -96,10 +124,12 @@ module SkpEPlumb
       add_termination(g, pts[0], pts[0] - pts[1], ctx, s[:termination]) if s[:terminate_start]
       add_termination(g, pts[n - 1], pts[n - 1] - pts[n - 2], ctx, s[:termination]) if s[:terminate_end]
 
-      place_auto_boxes(model, g, pts, features, s) if s[:auto_box]
-
       store_run_meta(container, pts, modes, s)
       container
+    end
+
+    def safe_dir(vec)
+      vec.length.zero? ? Geom::Vector3d.new(1, 0, 0) : vec.normalize
     end
 
     # Dedupe consecutive coincident points, carrying the matching bend mode so
@@ -278,31 +308,15 @@ module SkpEPlumb
               length_mm: path_length_mm(piece_pts), stock_m: ctx[:stock_m])
     end
 
-    # RETIE-style helper: drop the selected box after every Nth curve.
-    def place_auto_boxes(model, g, pts, features, s)
-      key = s[:box_key]
-      spec = key && Catalog::BOXES[key]
-      return unless spec
-
-      every = (s[:auto_box_every] || 2).to_i
-      every = 2 if every < 1
-      bend_count = 0
-      features.keys.sort.each do |i|
-        bend_count += 1
-        next unless (bend_count % every).zero?
-
-        drop_box(model, g, pts[i], spec, key)
-      end
-    end
-
-    def drop_box(model, entities, origin, spec, key)
+    # Build one box (used by the RETIE auto-box), oriented by `normal`.
+    def drop_box(model, entities, origin, spec, key, normal = Geom::Vector3d.new(0, 0, 1))
       w = GeomUtil.mm(spec[:w])
       h = GeomUtil.mm(spec[:h])
       d = GeomUtil.mm(spec[:d])
       body_mat = GeomUtil.material(model, "EPlumb_box_#{key}", spec[:color])
       lid_mat  = GeomUtil.material(model, "EPlumb_box_#{key}_lid",
                                    spec[:color].map { |c| [(c - 25), 0].max })
-      t = Geom::Transformation.new(origin, Geom::Vector3d.new(0, 0, 1))
+      t = GeomUtil.surface_transform(origin, normal)
       grp = GeomUtil.box(entities, ORIGIN, w, h, d,
                          material: body_mat, lid_material: lid_mat, transform: t)
       return unless grp
