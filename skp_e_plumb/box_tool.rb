@@ -62,8 +62,9 @@ module SkpEPlumb
       end
 
       model = Sketchup.active_model
-      normal = face ? face.normal : Geom::Vector3d.new(0, 0, 1)
-      normal = Geom::Vector3d.new(0, 0, 1) if normal.length.zero?
+      # Lay the box on the picked face; otherwise on the ground plane.
+      normal = face && face.respond_to?(:normal) ? face.normal : Geom::Vector3d.new(0, 0, 1)
+      normal = Geom::Vector3d.new(0, 0, 1) if normal.nil? || normal.length.zero?
 
       axes = normal.axes
       transform = Geom::Transformation.axes(origin, axes[0], axes[1], normal)
@@ -76,15 +77,22 @@ module SkpEPlumb
                                    spec[:color].map { |c| [(c - 25), 0].max })
 
       model.start_operation('SKP E-Plumb — Caja', true)
-      grp = GeomUtil.box(model.active_entities, ORIGIN, w, h, d,
-                         material: body_mat, lid_material: lid_mat, transform: transform)
-      if grp
-        grp.name = spec[:label]
-        Bom.tag(grp, part: Bom::PART_BOX, type: spec[:family], size: box_size_label(spec),
-                     desc: spec[:label], box_key: key, qty: 1)
-        model.commit_operation
-      else
+      begin
+        grp = GeomUtil.box(model.active_entities, ORIGIN, w, h, d,
+                           material: body_mat, lid_material: lid_mat, transform: transform)
+        if grp
+          grp.name = spec[:label]
+          Bom.tag(grp, part: Bom::PART_BOX, type: spec[:family], size: box_size_label(spec),
+                       desc: spec[:label], box_key: key, qty: 1)
+          model.commit_operation
+        else
+          model.abort_operation
+          UI.messagebox('No se pudo crear la caja (geometría no válida).')
+        end
+      rescue StandardError => e
         model.abort_operation
+        trace = (e.backtrace || [])[0, 6].join("\n")
+        UI.messagebox("SKP E-Plumb — error al colocar caja:\n\n#{e.class}: #{e.message}\n\n#{trace}")
       end
       view.invalidate
     end

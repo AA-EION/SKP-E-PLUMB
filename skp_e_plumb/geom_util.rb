@@ -176,24 +176,38 @@ module SkpEPlumb
         Geom::Point3d.new(-hw, hh, 0)
       ]
       face = ents.add_face(pts)
+      unless face
+        group.erase! if group.valid?
+        return nil
+      end
       face.reverse! if face.normal.z < 0
       face.pushpull(d)
       group.material = material if material
 
-      # Suggest a lid: a thin inset panel on the +Z face.
+      # Lid: a thin inset panel on the +Z face, built in its OWN nested group
+      # so it never merges with / disturbs the body's top face. Non-fatal.
       if lid_material
-        inset = [w, h].min * 0.08
-        lid = [
-          Geom::Point3d.new(-hw + inset, -hh + inset, d),
-          Geom::Point3d.new(hw - inset, -hh + inset, d),
-          Geom::Point3d.new(hw - inset, hh - inset, d),
-          Geom::Point3d.new(-hw + inset, hh - inset, d)
-        ]
-        lface = ents.add_face(lid)
-        if lface
-          lface.reverse! if lface.normal.z < 0
-          lface.pushpull(mm(3))
-          lface.material = lid_material
+        lid_group = nil
+        begin
+          lid_group = ents.add_group
+          le = lid_group.entities
+          inset = [w, h].min * 0.08
+          lid = [
+            Geom::Point3d.new(-hw + inset, -hh + inset, d),
+            Geom::Point3d.new(hw - inset, -hh + inset, d),
+            Geom::Point3d.new(hw - inset, hh - inset, d),
+            Geom::Point3d.new(-hw + inset, hh - inset, d)
+          ]
+          lface = le.add_face(lid)
+          if lface
+            lface.reverse! if lface.normal.z < 0
+            lface.pushpull(mm(3))
+            lid_group.material = lid_material
+          else
+            lid_group.erase!
+          end
+        rescue StandardError
+          lid_group.erase! if lid_group && lid_group.valid?
         end
       end
 
