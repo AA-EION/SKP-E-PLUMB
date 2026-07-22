@@ -107,8 +107,11 @@ Diámetros comerciales: `1/2"`, `3/4"`, `1"`, `1-1/4"`, `1-1/2"`, `2"`,
      **codo prefabricado** *antes de marcar cada esquina*.
    - **Backspace** para deshacer el último punto.
 4. **Doble clic** o **Enter** para construir el tramo. El BOM se actualiza.
-5. Para **cajas**: pulsa **▧ Colocar caja** y haz clic donde la quieras (se
-   monta sobre la cara si hay una).
+5. Para **cajas**: en **Ajustes** elige la **Caja activa** (Plexo o Rawelt);
+   luego pulsa **▧ Colocar caja** y **haz clic** donde la quieras. Se monta
+   sobre la cara si haces clic en una (p. ej. una pared o un tablero), o sobre
+   el plano del piso si haces clic en espacio vacío. Cada clic coloca otra
+   caja; pulsa **Esc** para terminar.
 6. Abre **📋 Ver BOM** y expórtalo a **CSV** o **HTML**.
 
 ### Editar una tubería existente (por anclas)
