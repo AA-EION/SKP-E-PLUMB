@@ -4,6 +4,18 @@ Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.3.1] - 2026-07-22
+
+### Corregido
+- **Cajas de paso (RETIE) montadas contra la superficie real**: ahora la caja
+  se orienta con su **cara ancha trasera paralela** a la pared/piso/techo donde
+  se dibujó (antes quedaba acostada y atravesando la pared). Para ello el
+  trazado **captura el normal de la cara sobre la que se marca cada punto** y lo
+  usa para orientar la caja; si el punto se marcó en el aire, se hace un
+  **raycast** a la superficie más cercana y, en último caso, se usa vertical.
+- Los normales se guardan en la tubería, así la **edición** conserva la
+  orientación de las cajas.
+
 ## [1.3.0] - 2026-07-22
 
 ### Cambiado
@@ -100,6 +112,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Diálogos `HtmlDialog` de Ajustes y BOM, barra de herramientas e íconos.
 - Empaquetado `.rbz`, pruebas de lógica offline y flujo de publicación en CI.
 
+[1.3.1]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.3.1
 [1.3.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.3.0
 [1.2.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.2.0
 [1.1.2]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.1.2

@@ -33,9 +33,11 @@ module SkpEPlumb
     #   :type :size :stock_m :bend_radius_mm :termination :connection :segments
     #   :bend_mode :terminate_start :terminate_end
     # `modes` is a per-vertex Array (modes[i] is the bend mode for vertex i);
-    # nil entries fall back to s[:bend_mode]. Returns the container group or nil.
-    def build_run(model, raw_pts, modes, s)
-      pts, modes = clean_path(raw_pts, modes)
+    # nil entries fall back to s[:bend_mode]. `normals` is an optional per-vertex
+    # Array of world-space [x,y,z] surface normals (the face each point was drawn
+    # on) used to mount boxes flush to that surface. Returns the container or nil.
+    def build_run(model, raw_pts, modes, s, normals = nil)
+      pts, modes, normals = clean_path(raw_pts, modes, normals)
       return nil if pts.length < 2
 
       type = s[:type]
@@ -97,10 +99,11 @@ module SkpEPlumb
           inset = [GeomUtil.mm([box_spec[:w], box_spec[:h]].min) / 2.0,
                    0.4 * li, 0.4 * lo].min
 
+          nrm = auto_box_normal(model, pts, i, normals, ctx, container)
           current << pts[i].offset(din, -inset)
           render_continuous_path(g, current, ctx)
           add_termination(g, pts[i].offset(din, -inset), din, ctx, s[:termination])
-          drop_box(model, g, pts[i], box_spec, box_key, Geom::Vector3d.new(0, 0, 1))
+          drop_box(model, g, pts[i], box_spec, box_key, nrm)
           add_termination(g, pts[i].offset(dout, inset), dout.reverse, ctx, s[:termination])
           current = [pts[i].offset(dout, inset)]
           bends_since_box = 0
@@ -124,7 +127,7 @@ module SkpEPlumb
       add_termination(g, pts[0], pts[0] - pts[1], ctx, s[:termination]) if s[:terminate_start]
       add_termination(g, pts[n - 1], pts[n - 1] - pts[n - 2], ctx, s[:termination]) if s[:terminate_end]
 
-      store_run_meta(container, pts, modes, s)
+      store_run_meta(container, pts, modes, normals, s)
       container
     end
 
@@ -132,30 +135,77 @@ module SkpEPlumb
       vec.length.zero? ? Geom::Vector3d.new(1, 0, 0) : vec.normalize
     end
 
-    # Dedupe consecutive coincident points, carrying the matching bend mode so
-    # the modes array stays aligned with the point array.
-    def clean_path(raw_pts, modes)
+    # Outward normal of the surface a box should mount on at vertex i. Prefers
+    # the face the point was drawn on; falls back to a short raycast toward the
+    # nearest surface; finally to world up.
+    def auto_box_normal(model, pts, i, normals, ctx, container)
+      if normals && normals[i]
+        v = Geom::Vector3d.new(*normals[i])
+        return v unless v.length.zero?
+      end
+      raycast_normal(model, pts[i], ctx, container) || Geom::Vector3d.new(0, 0, 1)
+    end
+
+    # Cast rays along the six axes to find the nearest surface (wall/floor/
+    # ceiling) the box can back onto. Best effort — returns nil if nothing near.
+    def raycast_normal(model, point, ctx, container)
+      return nil unless model.respond_to?(:raytest)
+
+      best = nil
+      bestd = GeomUtil.mm(600.0) # only consider surfaces within ~0.6 m
+      off = ctx[:radius] * 2.2   # start the ray just outside our own tube
+      axes = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
+      axes.each do |a|
+        dir = Geom::Vector3d.new(*a)
+        origin = point.offset(dir, off)
+        hit = model.raytest([origin, dir])
+        next unless hit
+
+        hp = hit[0]
+        path = hit[1]
+        next if path && container && path.respond_to?(:include?) && path.include?(container)
+
+        d = point.distance(hp)
+        if d < bestd
+          bestd = d
+          best = dir.reverse # box faces back out toward the run
+        end
+      end
+      best
+    rescue StandardError
+      nil
+    end
+
+    # Dedupe consecutive coincident points, carrying the matching bend mode and
+    # surface normal so the parallel arrays stay aligned with the point array.
+    def clean_path(raw_pts, modes, normals = nil)
       out_pts = []
       out_modes = []
+      out_normals = []
       raw_pts.each_with_index do |p, i|
         next unless out_pts.empty? || out_pts.last.distance(p) > 1.0e-6
 
         out_pts << p
         out_modes << (modes && modes[i])
+        out_normals << (normals && normals[i])
       end
-      [out_pts, out_modes]
+      [out_pts, out_modes, out_normals]
     end
 
     # ---- editable run metadata -------------------------------------------
 
     # Persist the run definition on its container so it can be re-opened and
     # edited by anchors later.
-    def store_run_meta(group, pts, modes, s)
+    def store_run_meta(group, pts, modes, normals, s)
       group.set_attribute(RUN_DICT, 'run', true)
       group.set_attribute(RUN_DICT, 'px', pts.map { |p| p.x.to_f })
       group.set_attribute(RUN_DICT, 'py', pts.map { |p| p.y.to_f })
       group.set_attribute(RUN_DICT, 'pz', pts.map { |p| p.z.to_f })
       group.set_attribute(RUN_DICT, 'modes', pts.each_index.map { |i| (modes[i] || s[:bend_mode] || 'field').to_s })
+      # Surface normals (0,0,0 marks "none").
+      group.set_attribute(RUN_DICT, 'nx', pts.each_index.map { |i| normals && normals[i] ? normals[i][0].to_f : 0.0 })
+      group.set_attribute(RUN_DICT, 'ny', pts.each_index.map { |i| normals && normals[i] ? normals[i][1].to_f : 0.0 })
+      group.set_attribute(RUN_DICT, 'nz', pts.each_index.map { |i| normals && normals[i] ? normals[i][2].to_f : 0.0 })
       group.set_attribute(RUN_DICT, 'type', s[:type])
       group.set_attribute(RUN_DICT, 'size', s[:size])
       group.set_attribute(RUN_DICT, 'stock_m', s[:stock_m].to_f)
@@ -177,7 +227,7 @@ module SkpEPlumb
         !group.attribute_dictionary(RUN_DICT).nil?
     end
 
-    # Read the editable definition back. Returns { pts:, modes:, s: } or nil.
+    # Read the editable definition back. Returns { pts:, modes:, normals:, s: }.
     def read_run_meta(group)
       return nil unless run?(group)
 
@@ -188,6 +238,16 @@ module SkpEPlumb
 
       pts = px.each_index.map { |i| Geom::Point3d.new(px[i], py[i], pz[i]) }
       modes = group.get_attribute(RUN_DICT, 'modes') || []
+
+      nx = group.get_attribute(RUN_DICT, 'nx')
+      ny = group.get_attribute(RUN_DICT, 'ny')
+      nz = group.get_attribute(RUN_DICT, 'nz')
+      normals = px.each_index.map do |i|
+        if nx && ny && nz && nx[i] && (nx[i] != 0.0 || ny[i] != 0.0 || nz[i] != 0.0)
+          [nx[i], ny[i], nz[i]]
+        end
+      end
+
       conn = group.get_attribute(RUN_DICT, 'connection').to_s
 
       s = {
@@ -205,7 +265,7 @@ module SkpEPlumb
         auto_box_every: group.get_attribute(RUN_DICT, 'auto_box_every', 2).to_i,
         box_key: group.get_attribute(RUN_DICT, 'box_key', '')
       }
-      { pts: pts, modes: modes, s: s }
+      { pts: pts, modes: modes, normals: normals, s: s }
     end
 
     # ---- feature computation ---------------------------------------------

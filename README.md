@@ -16,7 +16,7 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 > (NEC / NOM / RETIE, etc.).*
 
 - Licencia: **GPL-3.0-or-later**
-- Versión: **1.3.0**
+- Versión: **1.3.1**
 - Formato de instalación: **`.rbz`**
 
 ---
@@ -37,8 +37,9 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 - **Caja automática (RETIE)**: opción para que **tras cada N curvas** (por
   defecto 2) la tubería **llegue a una caja**, se coloque la **terminación**
   (conector/contratuerca + bushing normal o de aterrizaje) y **continúe** al
-  otro lado con su propia terminación — la caja **reemplaza** esa curva.
-  Activable/desactivable en Ajustes.
+  otro lado con su propia terminación — la caja **reemplaza** esa curva. La caja
+  se **monta contra la superficie** donde se dibujó el punto (pared/piso/techo),
+  con su cara ancha paralela a ella. Activable/desactivable en Ajustes.
 - **Curvas: dos modos** — se alternan **en vivo con `Alt` / `Option`**
   (o `Ctrl` en Windows) mientras dibujas:
   1. **Doblar tubo (curva de campo)** — la curva es parte del mismo tubo y su
