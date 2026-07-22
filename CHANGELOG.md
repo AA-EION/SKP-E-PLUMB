@@ -4,6 +4,26 @@ Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.0] - 2026-07-22
+
+### Añadido
+- **Caja automática (RETIE)**: opción activable en Ajustes para colocar la caja
+  seleccionada **tras cada N curvas** (por defecto 2) del trazado.
+- La tubería se **grafica en tramos de stock reales**: cada tubo (≤ el largo de
+  inventario) es una pieza independiente y visible, y la **unión (copla) queda
+  montada sobre el empalme** (un tubo termina, empieza el otro, y encima queda
+  la copla). Los codos prefabricados quedan como **pieza aparte** unida con una
+  copla a cada lado.
+
+### Cambiado
+- El **BOM cuenta los tubos por pieza dibujada** (coincide con lo graficado) y
+  muestra los metros totales como detalle.
+
+### Corregido
+- **Orientación de cajas**: la cara ancha (W×H) queda **plana sobre la
+  superficie** donde se hace clic (el eje de profundidad se alinea al normal),
+  en lugar de aparecer perpendicular.
+
 ## [1.1.2] - 2026-07-21
 
 ### Corregido
@@ -66,6 +86,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Diálogos `HtmlDialog` de Ajustes y BOM, barra de herramientas e íconos.
 - Empaquetado `.rbz`, pruebas de lógica offline y flujo de publicación en CI.
 
+[1.2.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.2.0
 [1.1.2]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.1.2
 [1.1.1]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.1.1
 [1.1.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.1.0

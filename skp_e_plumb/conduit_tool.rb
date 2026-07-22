@@ -200,7 +200,9 @@ module SkpEPlumb
         connection: Settings.connection, segments: Settings.segments,
         bend_mode: Settings.bend_mode,
         terminate_start: Settings.termination != :none,
-        terminate_end: Settings.termination != :none
+        terminate_end: Settings.termination != :none,
+        auto_box: Settings.auto_box?, auto_box_every: Settings.auto_box_every,
+        box_key: Settings.box_key
       }
 
       model.start_operation('SKP E-Plumb — Tubería', true)

@@ -41,12 +41,14 @@ check('condulet types present (LB, T, X, ...)') do
 end
 
 # ---- BOM aggregation -------------------------------------------------------
-# 7 m of EMT 3/4" from two segments, 3 m stock -> ceil(7/3) = 3 tubes.
+# 7 m of EMT 3/4" drawn as three stock pieces (3 + 3 + 1 m) -> 3 tubes counted.
 raw = [
   { 'part' => 'pipe', 'type' => 'EMT', 'size' => '3/4', 'desc' => 'Tubería EMT 3/4"',
-    'length_mm' => 4000.0, 'stock_m' => 3.0 },
+    'length_mm' => 3000.0, 'stock_m' => 3.0 },
   { 'part' => 'pipe', 'type' => 'EMT', 'size' => '3/4', 'desc' => 'Tubería EMT 3/4"',
     'length_mm' => 3000.0, 'stock_m' => 3.0 },
+  { 'part' => 'pipe', 'type' => 'EMT', 'size' => '3/4', 'desc' => 'Tubería EMT 3/4"',
+    'length_mm' => 1000.0, 'stock_m' => 3.0 },
   { 'part' => 'coupling', 'type' => 'EMT', 'size' => '3/4', 'desc' => 'Copla set-screw', 'qty' => 1 },
   { 'part' => 'coupling', 'type' => 'EMT', 'size' => '3/4', 'desc' => 'Copla set-screw', 'qty' => 1 },
   { 'part' => 'elbow90', 'type' => 'EMT', 'size' => '3/4', 'desc' => 'Codo 90', 'qty' => 1 },
@@ -60,7 +62,7 @@ def find(data, cat)
   data[:lines].find { |l| l[:category] == cat }
 end
 
-check('pipe rolls up to 3 tubes (7m / 3m stock)') do
+check('pipe counts 3 drawn pieces = 3 tubes') do
   pipe = find(data, 'Tubería')
   pipe && pipe[:qty] == 3 && pipe[:unit] == 'tubo(s)'
 end
@@ -79,13 +81,15 @@ check('CSV quotes fields with commas') { !csv.include?("Tubería EMT 3/4\",EMT")
 html = Bom.to_html(data)
 check('HTML export renders a table') { html.include?('<table>') && html.include?('Bushing aterrizaje') }
 
-# Edge case: exactly one stock length -> 1 tube, no rounding surprise.
+# Piece-based counting: each drawn pipe piece is one tube.
 one = Bom.summarize([{ 'part' => 'pipe', 'type' => 'IMC', 'size' => '1', 'desc' => 'x',
                        'length_mm' => 3000.0, 'stock_m' => 3.0 }])
-check('exactly 3m with 3m stock -> 1 tube') { one[:lines].first[:qty] == 1 }
-tiny = Bom.summarize([{ 'part' => 'pipe', 'type' => 'IMC', 'size' => '1', 'desc' => 'x',
-                        'length_mm' => 3001.0, 'stock_m' => 3.0 }])
-check('3.001m with 3m stock -> 2 tubes') { tiny[:lines].first[:qty] == 2 }
+check('one drawn piece -> 1 tube') { one[:lines].first[:qty] == 1 }
+two = Bom.summarize([
+  { 'part' => 'pipe', 'type' => 'IMC', 'size' => '1', 'desc' => 'x', 'length_mm' => 3000.0, 'stock_m' => 3.0 },
+  { 'part' => 'pipe', 'type' => 'IMC', 'size' => '1', 'desc' => 'x', 'length_mm' => 500.0, 'stock_m' => 3.0 }
+])
+check('two drawn pieces -> 2 tubes') { two[:lines].first[:qty] == 2 }
 
 puts
 if $failures.zero?

@@ -88,7 +88,8 @@ module SkpEPlumb
     def coerce(key, value)
       case key
       when 'stock_m', 'bend_radius_mm' then value.to_f
-      when 'segments' then value.to_i
+      when 'segments', 'auto_box_every' then value.to_i
+      when 'auto_box' then value.to_s == 'true'
       else value
       end
     end
@@ -127,6 +128,7 @@ module SkpEPlumb
 
       field_ck = s.field_bend? ? 'checked' : ''
       premade_ck = s.field_bend? ? '' : 'checked'
+      auto_ck = s.auto_box? ? 'checked' : ''
 
       <<~HTML
         <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
@@ -203,6 +205,17 @@ module SkpEPlumb
               <select id="box_key" onchange="setV('box_key',this.value)">#{box_opts}</select>
             </div>
           </div>
+
+          <label>Caja automática (RETIE)</label>
+          <div class="modes" style="align-items:center">
+            <label style="flex:0 0 auto"><input type="checkbox" id="auto_box" #{auto_ck}
+              onclick="setV('auto_box', this.checked ? 'true' : 'false')"> Activar</label>
+            <span style="flex:1">cada
+              <input type="number" id="auto_box_every" min="1" max="10" step="1"
+                     value="#{s.auto_box_every}" style="width:56px"
+                     onchange="setV('auto_box_every',this.value)"> curva(s) coloca la <b>caja activa</b></span>
+          </div>
+          <div class="hint">Inserta la caja seleccionada arriba tras cada N curvas del trazado.</div>
 
           <hr>
           <div class="btns">
