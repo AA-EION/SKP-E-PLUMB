@@ -21,6 +21,7 @@ module SkpEPlumb
     def activate
       @pts = []
       @modes = []
+      @normals = [] # world-space normal of the face each point was placed on (or nil)
       @ip = Sketchup::InputPoint.new
       @ip_prev = Sketchup::InputPoint.new
       @flash = nil
@@ -160,9 +161,29 @@ module SkpEPlumb
     def add_point(pt, view)
       @pts << pt
       @modes << Settings.bend_mode
+      @normals << current_face_normal
       @ip_prev = Sketchup::InputPoint.new(pt)
       update_ui
       view.invalidate
+    end
+
+    # World-space normal of the face under the current input point, so boxes can
+    # be mounted flush to the surface the conduit was drawn on. nil if the point
+    # was placed in empty space.
+    def current_face_normal
+      return nil unless @ip&.valid?
+
+      face = @ip.face
+      return nil unless face
+
+      n = face.normal
+      begin
+        t = @ip.transformation
+        n = n.transform(t) if t
+      rescue StandardError
+        nil
+      end
+      n.length.zero? ? nil : [n.x.to_f, n.y.to_f, n.z.to_f]
     end
 
     def undo_point(view)
@@ -170,6 +191,7 @@ module SkpEPlumb
 
       @pts.pop
       @modes.pop
+      @normals.pop
       @ip_prev = @pts.empty? ? Sketchup::InputPoint.new : Sketchup::InputPoint.new(@pts.last)
       update_ui
       view.invalidate
@@ -178,6 +200,7 @@ module SkpEPlumb
     def reset_run
       @pts = []
       @modes = []
+      @normals = []
       @ip_prev = Sketchup::InputPoint.new
     end
 
@@ -206,7 +229,7 @@ module SkpEPlumb
       }
 
       model.start_operation('SKP E-Plumb — Tubería', true)
-      group = Builder.build_run(model, @pts, @modes, s)
+      group = Builder.build_run(model, @pts, @modes, s, @normals)
       if group
         model.commit_operation
         @flash = 'Tubería creada. BOM actualizado.'
