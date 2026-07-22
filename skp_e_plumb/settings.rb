@@ -20,7 +20,9 @@ module SkpEPlumb
       'connection'     => 'setscrew', # only meaningful for EMT
       'termination'    => 'std',   # 'none' | 'std' | 'gnd'
       'box_key'        => 'PLEXO_105',
-      'segments'       => 24
+      'segments'       => 24,
+      'auto_box'       => false,   # RETIE: drop a box after every N curves
+      'auto_box_every' => 2
     }.freeze
 
     @state = nil
@@ -86,6 +88,16 @@ module SkpEPlumb
 
     def segments
       state['segments'].to_i
+    end
+
+    def auto_box?
+      v = state['auto_box']
+      v == true || v == 'true' || v == 1
+    end
+
+    def auto_box_every
+      e = state['auto_box_every'].to_i
+      e < 1 ? 2 : e
     end
 
     def field_bend?

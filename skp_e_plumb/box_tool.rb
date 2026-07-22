@@ -66,8 +66,10 @@ module SkpEPlumb
       normal = face && face.respond_to?(:normal) ? face.normal : Geom::Vector3d.new(0, 0, 1)
       normal = Geom::Vector3d.new(0, 0, 1) if normal.nil? || normal.length.zero?
 
-      axes = normal.axes
-      transform = Geom::Transformation.axes(origin, axes[0], axes[1], normal)
+      # Transformation.new(point, zaxis) aligns the box's local +Z (its depth)
+      # to the surface normal, so the wide W×H face lies flat on the surface and
+      # the box sticks out by its depth. This is the reliable orientation form.
+      transform = Geom::Transformation.new(origin, normal)
 
       w = GeomUtil.mm(spec[:w])
       h = GeomUtil.mm(spec[:h])

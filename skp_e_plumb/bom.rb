@@ -78,6 +78,7 @@ module SkpEPlumb
     # Returns { lines: [...], generated_at: Time, part_total: n }.
     def summarize(raw)
       pipe_len = Hash.new(0.0)  # key -> summed metres
+      pipe_count = Hash.new(0)  # key -> number of tube pieces drawn
       pipe_stock = {}           # key -> stock_m
       counts = Hash.new(0)      # key -> pcs
       meta   = {}               # key -> descriptor hash
@@ -89,8 +90,11 @@ module SkpEPlumb
         desc = r['desc']
 
         if part == PART_PIPE
+          # Each drawn piece is one stock tube (cut to length); count pieces so
+          # the BOM matches what is drawn every stock length.
           key = "PIPE|#{type}|#{size}"
           pipe_len[key] += (r['length_mm'] || 0.0) / 1000.0
+          pipe_count[key] += 1
           pipe_stock[key] = (r['stock_m'] || 3.0)
           meta[key] ||= { category: 'Tubería', desc: desc, type: type, size: size }
         else
@@ -105,7 +109,7 @@ module SkpEPlumb
 
       pipe_len.each do |key, metres|
         stock = pipe_stock[key]
-        tubes = stock.to_f > 0 ? (metres / stock).ceil : 0
+        tubes = pipe_count[key]
         m = meta[key]
         lines << {
           category: m[:category],
@@ -114,7 +118,7 @@ module SkpEPlumb
           size: m[:size],
           qty: tubes,
           unit: 'tubo(s)',
-          detail: format('%.2f m (tramo %.1f m)', metres, stock)
+          detail: format('%.2f m totales (tramo %.1f m)', metres, stock)
         }
       end
 

@@ -16,7 +16,7 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 > (NEC / NOM / RETIE, etc.).*
 
 - Licencia: **GPL-3.0-or-later**
-- Versión: **1.1.0**
+- Versión: **1.2.0**
 - Formato de instalación: **`.rbz`**
 
 ---
@@ -29,9 +29,13 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
   exterior real por tipo de canalización.
 - **Inventario / tramo de stock**: define el largo máximo de tubo disponible
   (p. ej. **3 m**). El plugin:
-  - coloca una **copla en cada empalme** cuando un tramo recto excede el largo
-    de stock, y
-  - calcula en el BOM **cuántos tubos** hay que comprar = `⌈metros / tramo⌉`.
+  - **grafica cada tubo como una pieza independiente** de ≤ el largo de stock,
+    para que veas dónde queda cada tubo;
+  - coloca una **copla montada sobre cada empalme** (un tubo termina, empieza el
+    siguiente y encima queda la copla); y
+  - cuenta en el BOM **un tubo por pieza dibujada** (más los metros totales).
+- **Caja automática (RETIE)**: opción para colocar la **caja seleccionada tras
+  cada N curvas** (por defecto 2), activable/desactivable en Ajustes.
 - **Curvas: dos modos** — se alternan **en vivo con `Alt` / `Option`**
   (o `Ctrl` en Windows) mientras dibujas:
   1. **Doblar tubo (curva de campo)** — la curva es parte del mismo tubo y su
@@ -100,6 +104,8 @@ Diámetros comerciales: `1/2"`, `3/4"`, `1"`, `1-1/4"`, `1-1/2"`, `2"`,
    - **Tramo en inventario (m)** — largo máximo por tubo.
    - **Radio de curvatura (mm)** — o pulsa *“usar mínimo NEC”*.
    - **Modo de curva**, **unión** (EMT), **terminación** y **caja activa**.
+   - **Caja automática (RETIE)**: actívala para que, al dibujar, se coloque la
+     caja activa tras cada N curvas.
 2. Pulsa **✏️ Dibujar tubería** (o el ícono de la barra).
 3. **Haz clic** para marcar cada punto del trazado. Puedes:
    - Escribir una **longitud exacta** en el cuadro de medidas (VCB) y Enter.
@@ -137,11 +143,11 @@ Cada pieza modelada lleva metadatos (diccionario de atributos `SKP_E_PLUMB`).
 El BOM se **deriva del modelo**, así que si borras una tubería o un codo, el
 conteo se actualiza al regenerarlo.
 
-- **Tubería**: se suman los **metros** por (tipo, medida) y se calcula
-  `tubos = ⌈metros / tramo_de_stock⌉`. El detalle muestra los metros totales y
-  el tramo usado.
-- **Coplas**: una por cada empalme obligado por el largo de stock en tramos
-  rectos, más dos por cada codo prefabricado.
+- **Tubería**: cada tubo se **dibuja como una pieza** de ≤ el tramo de stock,
+  y el BOM **cuenta una por pieza** (por tipo/medida). El detalle muestra los
+  metros totales y el tramo usado.
+- **Coplas**: una **montada sobre cada empalme** entre tubos consecutivos, más
+  dos por cada codo prefabricado.
 - **Codos 45°/90°**: uno por cada curva hecha en modo *prefabricado*.
 - **Curvas de campo**: no generan accesorio; su arco se **suma a los metros**
   de tubería.

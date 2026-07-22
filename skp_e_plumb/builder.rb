@@ -69,25 +69,34 @@ module SkpEPlumb
       n = pts.length
       features = compute_features(pts, modes, bend_r, s[:bend_mode])
 
-      prev = pts[0]
+      # Assemble the run as a sequence of CONTINUOUS tube paths (straights +
+      # field bends) separated by PREMADE elbows. Each continuous path is then
+      # cut into stock-length tube pieces, and a coupling straddles every joint
+      # (one tube ends, the next begins, the union sits on top). A premade elbow
+      # is its own fitting, joined to the tubes with a coupling on each side.
+      current = [pts[0]]
       (1..n - 2).each do |i|
         f = features[i]
-        next if f.nil? # collinear vertex, absorb into the straight leg
+        next if f.nil? # collinear vertex, absorbed into the straight run
 
-        add_leg(g, prev, f[:t_in], ctx)
+        current << f[:t_in]
         if f[:mode] == :field
-          add_field_bend(g, f[:arc], ctx)
+          current.concat(f[:arc][1..-1]) # bend is part of the continuous tube
         else
+          render_continuous_path(g, current, ctx)
           add_premade_elbow(g, f[:arc], f[:deg], ctx)
           add_coupling(g, f[:t_in], seg_dir(f[:arc], :start), ctx)
           add_coupling(g, f[:t_out], seg_dir(f[:arc], :end), ctx)
+          current = [f[:t_out]]
         end
-        prev = f[:t_out]
       end
-      add_leg(g, prev, pts[n - 1], ctx)
+      current << pts[n - 1]
+      render_continuous_path(g, current, ctx)
 
       add_termination(g, pts[0], pts[0] - pts[1], ctx, s[:termination]) if s[:terminate_start]
       add_termination(g, pts[n - 1], pts[n - 1] - pts[n - 2], ctx, s[:termination]) if s[:terminate_end]
+
+      place_auto_boxes(model, g, pts, features, s) if s[:auto_box]
 
       store_run_meta(container, pts, modes, s)
       container
@@ -127,6 +136,9 @@ module SkpEPlumb
       group.set_attribute(RUN_DICT, 'bend_mode', (s[:bend_mode] || 'field').to_s)
       group.set_attribute(RUN_DICT, 'terminate_start', s[:terminate_start] ? true : false)
       group.set_attribute(RUN_DICT, 'terminate_end', s[:terminate_end] ? true : false)
+      group.set_attribute(RUN_DICT, 'auto_box', s[:auto_box] ? true : false)
+      group.set_attribute(RUN_DICT, 'auto_box_every', (s[:auto_box_every] || 2).to_i)
+      group.set_attribute(RUN_DICT, 'box_key', s[:box_key].to_s)
       group
     end
 
@@ -158,7 +170,10 @@ module SkpEPlumb
         segments: group.get_attribute(RUN_DICT, 'segments', 24).to_i,
         bend_mode: group.get_attribute(RUN_DICT, 'bend_mode', 'field'),
         terminate_start: group.get_attribute(RUN_DICT, 'terminate_start', true),
-        terminate_end: group.get_attribute(RUN_DICT, 'terminate_end', true)
+        terminate_end: group.get_attribute(RUN_DICT, 'terminate_end', true),
+        auto_box: group.get_attribute(RUN_DICT, 'auto_box', false),
+        auto_box_every: group.get_attribute(RUN_DICT, 'auto_box_every', 2).to_i,
+        box_key: group.get_attribute(RUN_DICT, 'box_key', '')
       }
       { pts: pts, modes: modes, s: s }
     end
@@ -207,42 +222,97 @@ module SkpEPlumb
 
     # ---- piece builders ---------------------------------------------------
 
-    # A straight pipe leg with couplings at each stock boundary.
-    def add_leg(g, a, b, ctx)
-      u = b - a
-      length = u.length
-      return if length < TINY
-
-      u.normalize!
-      tube = GeomUtil.straight_tube(g, a, b, ctx[:radius], segments: ctx[:segs],
-                                                           material: ctx[:pipe_mat])
-      if tube
-        Bom.tag(tube,
-                part: Bom::PART_PIPE, type: ctx[:type], size: ctx[:size],
-                desc: "Tubería #{ctx[:type]} #{ctx[:size]}\"",
-                length_mm: GeomUtil.to_mm(length), stock_m: ctx[:stock_m])
-      end
+    # Cut a continuous centreline into stock-length tube pieces. Each piece is
+    # its own tube (so you see where every tube is), and a coupling straddles
+    # every joint where one tube ends and the next begins.
+    def render_continuous_path(g, path, ctx)
+      path = GeomUtil.clean_points(path)
+      return if path.length < 2
 
       stock_in = GeomUtil.mm(ctx[:stock_m] * 1000.0)
-      return if stock_in <= TINY
+      stock_in = nil if stock_in && stock_in <= TINY
 
-      k = 1
-      while k * stock_in < length - TINY
-        c = a.offset(u, k * stock_in)
-        add_coupling(g, c, u, ctx)
-        k += 1
+      piece = [path[0]]
+      acc = 0.0
+      prev = path[0]
+      j = 1
+      while j < path.length
+        nxt = path[j]
+        seg = nxt - prev
+        seg_len = seg.length
+        if seg_len <= TINY
+          prev = nxt
+          j += 1
+          next
+        end
+
+        if stock_in.nil? || acc + seg_len <= stock_in + TINY
+          piece << nxt
+          acc += seg_len
+          prev = nxt
+          j += 1
+        else
+          # Split this segment at the stock boundary; drop a coupling there.
+          dir = seg.normalize
+          cut = prev.offset(dir, stock_in - acc)
+          piece << cut
+          emit_pipe_piece(g, piece, ctx)
+          add_coupling(g, cut, dir, ctx)
+          piece = [cut]
+          acc = 0.0
+          prev = cut
+        end
       end
+      emit_pipe_piece(g, piece, ctx) if piece.length >= 2
     end
 
-    def add_field_bend(g, arc_pts, ctx)
-      tube = GeomUtil.tube_group(g, arc_pts, ctx[:radius], segments: ctx[:segs],
-                                                           material: ctx[:pipe_mat])
+    # One tube piece (<= a stock length). Each piece is one purchased tube.
+    def emit_pipe_piece(g, piece_pts, ctx)
+      tube = GeomUtil.tube_group(g, piece_pts, ctx[:radius], segments: ctx[:segs],
+                                                             material: ctx[:pipe_mat])
       return unless tube
 
       Bom.tag(tube,
               part: Bom::PART_PIPE, type: ctx[:type], size: ctx[:size],
-              desc: "Tubería #{ctx[:type]} #{ctx[:size]}\" (curva de campo)",
-              length_mm: path_length_mm(arc_pts), stock_m: ctx[:stock_m])
+              desc: "Tubería #{ctx[:type]} #{ctx[:size]}\"",
+              length_mm: path_length_mm(piece_pts), stock_m: ctx[:stock_m])
+    end
+
+    # RETIE-style helper: drop the selected box after every Nth curve.
+    def place_auto_boxes(model, g, pts, features, s)
+      key = s[:box_key]
+      spec = key && Catalog::BOXES[key]
+      return unless spec
+
+      every = (s[:auto_box_every] || 2).to_i
+      every = 2 if every < 1
+      bend_count = 0
+      features.keys.sort.each do |i|
+        bend_count += 1
+        next unless (bend_count % every).zero?
+
+        drop_box(model, g, pts[i], spec, key)
+      end
+    end
+
+    def drop_box(model, entities, origin, spec, key)
+      w = GeomUtil.mm(spec[:w])
+      h = GeomUtil.mm(spec[:h])
+      d = GeomUtil.mm(spec[:d])
+      body_mat = GeomUtil.material(model, "EPlumb_box_#{key}", spec[:color])
+      lid_mat  = GeomUtil.material(model, "EPlumb_box_#{key}_lid",
+                                   spec[:color].map { |c| [(c - 25), 0].max })
+      t = Geom::Transformation.new(origin, Geom::Vector3d.new(0, 0, 1))
+      grp = GeomUtil.box(entities, ORIGIN, w, h, d,
+                         material: body_mat, lid_material: lid_mat, transform: t)
+      return unless grp
+
+      grp.name = spec[:label]
+      Bom.tag(grp, part: Bom::PART_BOX, type: spec[:family],
+                   size: "#{spec[:w]}×#{spec[:h]}×#{spec[:d]}",
+                   desc: spec[:label], box_key: key, qty: 1)
+    rescue StandardError
+      nil
     end
 
     def add_premade_elbow(g, arc_pts, deg, ctx)
