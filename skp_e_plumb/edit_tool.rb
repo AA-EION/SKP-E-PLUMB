@@ -47,6 +47,10 @@ module SkpEPlumb
       view.invalidate
     end
 
+    def onSetCursor
+      UI.set_cursor(Cursors.get('edit'))
+    end
+
     def onCancel(_reason, view)
       if @run
         reset_all

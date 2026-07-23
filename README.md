@@ -16,7 +16,7 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 > (NEC / NOM / RETIE, etc.).*
 
 - Licencia: **GPL-3.0-or-later**
-- Versión: **1.3.1**
+- Versión: **1.4.0**
 - Formato de instalación: **`.rbz`**
 
 ---
@@ -147,9 +147,11 @@ Cada pieza modelada lleva metadatos (diccionario de atributos `SKP_E_PLUMB`).
 El BOM se **deriva del modelo**, así que si borras una tubería o un codo, el
 conteo se actualiza al regenerarlo.
 
-- **Tubería**: cada tubo se **dibuja como una pieza** de ≤ el tramo de stock,
-  y el BOM **cuenta una por pieza** (por tipo/medida). El detalle muestra los
-  metros totales y el tramo usado.
+- **Tubería** — dos modos de conteo seleccionables en el diálogo del BOM:
+  - **Por tramos cortados**: cada pieza dibujada = 1 tubo.
+  - **Optimizado (recorrido total)**: suma todos los metros del mismo
+    tipo/medida en el modelo y calcula tubos = ⌈total / tramo⌉ (reutiliza
+    retazos). Siempre se muestran los metros totales.
 - **Coplas**: una **montada sobre cada empalme** entre tubos consecutivos, más
   dos por cada codo prefabricado.
 - **Codos 45°/90°**: uno por cada curva hecha en modo *prefabricado*.

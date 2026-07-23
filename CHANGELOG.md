@@ -4,6 +4,23 @@ Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.4.0] - 2026-07-22
+
+### Añadido
+- **Cursores propios por herramienta** (tubería / caja / edición) para ver
+  claramente qué modo del plugin está activo.
+- **BOM con dos modos de conteo de tubos**, seleccionables en el diálogo:
+  - **Por tramos cortados** — cada pieza dibujada cuenta como un tubo.
+  - **Optimizado (recorrido total)** — suma **todos** los metros del mismo
+    tipo/medida en el modelo y calcula tubos = ⌈total / tramo⌉, reutilizando
+    retazos entre tramos. Siempre se muestran los metros totales.
+
+### Corregido
+- **Orientación de cajas sobre caras dentro de grupos/componentes**: el normal
+  de la cara ahora se transforma a **coordenadas de mundo**. Antes las cajas
+  quedaban mal en paredes que son grupos (y bien en el piso), porque se usaba el
+  normal en coordenadas locales del grupo.
+
 ## [1.3.1] - 2026-07-22
 
 ### Corregido
@@ -112,6 +129,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Diálogos `HtmlDialog` de Ajustes y BOM, barra de herramientas e íconos.
 - Empaquetado `.rbz`, pruebas de lógica offline y flujo de publicación en CI.
 
+[1.4.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.4.0
 [1.3.1]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.3.1
 [1.3.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.3.0
 [1.2.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.2.0

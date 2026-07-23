@@ -69,14 +69,19 @@ module SkpEPlumb
     end
 
     # Aggregate the model into BOM line items. Returns { lines:, ... }.
-    def aggregate(model = Sketchup.active_model)
-      summarize(collect_raw(model))
+    def aggregate(model = Sketchup.active_model, mode = :pieces)
+      summarize(collect_raw(model), mode)
     end
 
     # Pure aggregation of raw attribute rows into BOM line items grouped by
     # material key. Kept free of the SketchUp API so it can be unit tested.
-    # Returns { lines: [...], generated_at: Time, part_total: n }.
-    def summarize(raw)
+    # `mode` controls how tubes are counted:
+    #   :pieces    -> each drawn stock piece is one tube (no offcut reuse)
+    #   :optimized -> ceil(total metres / stock) over the WHOLE model per
+    #                 type/size (reuses offcuts between runs)
+    # Returns { lines: [...], generated_at:, part_total:, mode: }.
+    def summarize(raw, mode = :pieces)
+      mode = mode.to_sym
       pipe_len = Hash.new(0.0)  # key -> summed metres
       pipe_count = Hash.new(0)  # key -> number of tube pieces drawn
       pipe_stock = {}           # key -> stock_m
@@ -109,7 +114,12 @@ module SkpEPlumb
 
       pipe_len.each do |key, metres|
         stock = pipe_stock[key]
-        tubes = pipe_count[key]
+        tubes = if mode == :optimized
+                  stock > 0 ? (metres / stock).ceil : pipe_count[key]
+                else
+                  pipe_count[key]
+                end
+        note = mode == :optimized ? 'optimizado' : "#{pipe_count[key]} tramo(s)"
         m = meta[key]
         lines << {
           category: m[:category],
@@ -118,7 +128,7 @@ module SkpEPlumb
           size: m[:size],
           qty: tubes,
           unit: 'tubo(s)',
-          detail: format('%.2f m totales (tramo %.1f m)', metres, stock)
+          detail: format('%.2f m totales · %s (tramo %.1f m)', metres, note, stock)
         }
       end
 
@@ -136,7 +146,7 @@ module SkpEPlumb
       end
 
       lines.sort_by! { |l| [order_index(l[:category]), l[:type].to_s, l[:size].to_s] }
-      { lines: lines, generated_at: Time.now, part_total: raw.length }
+      { lines: lines, generated_at: Time.now, part_total: raw.length, mode: mode }
     end
 
     def category_label(part)

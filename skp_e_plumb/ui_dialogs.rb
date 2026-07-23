@@ -244,8 +244,12 @@ module SkpEPlumb
 
     # ---- BOM dialog -------------------------------------------------------
 
+    def bom_mode
+      (Settings.get('bom_mode') || 'pieces').to_sym
+    end
+
     def show_bom
-      data = Bom.aggregate
+      data = Bom.aggregate(Sketchup.active_model, bom_mode)
 
       if @bom_dlg&.visible?
         @bom_dlg.execute_script("document.getElementById('tbl').innerHTML=" \
@@ -278,7 +282,15 @@ module SkpEPlumb
 
     def register_bom_callbacks(dlg)
       dlg.add_action_callback('refresh') do |_ctx|
-        data = Bom.aggregate
+        data = Bom.aggregate(Sketchup.active_model, bom_mode)
+        dlg.execute_script("document.getElementById('tbl').innerHTML=" \
+                           "#{js_string(Bom.table_html(data))};")
+        nil
+      end
+
+      dlg.add_action_callback('set_mode') do |_ctx, value|
+        Settings.set('bom_mode', value)
+        data = Bom.aggregate(Sketchup.active_model, bom_mode)
         dlg.execute_script("document.getElementById('tbl').innerHTML=" \
                            "#{js_string(Bom.table_html(data))};")
         nil
@@ -296,7 +308,7 @@ module SkpEPlumb
     end
 
     def export_bom(fmt)
-      data = Bom.aggregate
+      data = Bom.aggregate(Sketchup.active_model, bom_mode)
       default = fmt == :csv ? 'BOM_SKP_E_Plumb.csv' : 'BOM_SKP_E_Plumb.html'
       path = UI.savepanel('Guardar BOM', dir_hint, default)
       return unless path
@@ -314,13 +326,17 @@ module SkpEPlumb
     end
 
     def bom_dialog_html(data)
+      pieces_ck = data[:mode] == :optimized ? '' : 'checked'
+      opt_ck    = data[:mode] == :optimized ? 'checked' : ''
       <<~HTML
         <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
         <style>
           body{font-family:Segoe UI,Helvetica,Arial,sans-serif;margin:0;color:#1b1e24;background:#fff;font-size:13px}
-          .bar{position:sticky;top:0;background:#2b6cb0;color:#fff;padding:10px 16px;display:flex;gap:8px;align-items:center}
-          .bar h1{font-size:15px;margin:0;flex:1}
+          .bar{position:sticky;top:0;background:#2b6cb0;color:#fff;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+          .bar h1{font-size:15px;margin:0;flex:1 1 100%}
           .bar button{background:#fff;color:#2b6cb0;border:0;border-radius:6px;padding:7px 12px;font-weight:600;cursor:pointer}
+          .modes{flex:1;display:flex;gap:10px;font-size:12px;align-items:center}
+          .modes label{cursor:pointer}
           .content{padding:16px}
           table{border-collapse:collapse;width:100%;font-size:13px}
           th,td{border:1px solid #d4d7dd;padding:6px 8px;text-align:left}
@@ -331,6 +347,13 @@ module SkpEPlumb
         </style></head><body>
         <div class="bar">
           <h1>Lista de materiales (BOM)</h1>
+          <div class="modes">
+            <span>Conteo de tubos:</span>
+            <label><input type="radio" name="bm" #{pieces_ck}
+              onclick="sketchup.set_mode('pieces')"> Por tramos cortados</label>
+            <label><input type="radio" name="bm" #{opt_ck}
+              onclick="sketchup.set_mode('optimized')"> Optimizado (recorrido total)</label>
+          </div>
           <button onclick="sketchup.refresh()">↻ Actualizar</button>
           <button onclick="sketchup.export_csv()">CSV</button>
           <button onclick="sketchup.export_html()">HTML</button>
