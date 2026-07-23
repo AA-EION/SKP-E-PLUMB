@@ -4,6 +4,17 @@ Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.6.0] - 2026-07-23
+
+### Añadido
+- **Editar el tipo de nodo** en modo edición: con el cursor sobre un ancla,
+  **Alt / Option cicla** ese nodo entre **curva de campo → codo prefabricado →
+  caja**. Un nodo marcado como **caja** inserta una **caja de paso** ahí (con
+  terminación a ambos lados), incluso en tramos rectos. Las anclas se colorean
+  por tipo: **azul** = curva, **verde** = codo, **naranja** = caja.
+- Junto con **insertar vértices** (clic en un segmento) y **extender** (clic en
+  vacío), permite **añadir y cambiar elementos** de un tramo con facilidad.
+
 ## [1.5.0] - 2026-07-23
 
 ### Añadido
@@ -144,6 +155,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Diálogos `HtmlDialog` de Ajustes y BOM, barra de herramientas e íconos.
 - Empaquetado `.rbz`, pruebas de lógica offline y flujo de publicación en CI.
 
+[1.6.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.6.0
 [1.5.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.5.0
 [1.4.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.4.0
 [1.3.1]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.3.1

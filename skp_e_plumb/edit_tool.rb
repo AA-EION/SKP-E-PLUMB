@@ -116,7 +116,7 @@ module SkpEPlumb
         rebuild(view)
         true
       elsif alt_key?(key)
-        toggle_vertex_mode(view)
+        cycle_vertex_type(view)
         true
       elsif delete_key?(key)
         delete_vertex(view)
@@ -191,7 +191,11 @@ module SkpEPlumb
     end
 
     def mode_color(mode)
-      mode.to_s == 'premade' ? Sketchup::Color.new(47, 133, 90) : Sketchup::Color.new(60, 90, 200)
+      case mode.to_s
+      when 'premade' then Sketchup::Color.new(47, 133, 90)  # green = elbow
+      when 'box'     then Sketchup::Color.new(240, 130, 0)  # orange = box
+      else Sketchup::Color.new(60, 90, 200)                 # blue = field bend
+      end
     end
 
     # Index of the anchor within HANDLE_PX pixels of (x, y), or nil.
@@ -348,13 +352,24 @@ module SkpEPlumb
       view.invalidate
     end
 
-    def toggle_vertex_mode(view)
+    NODE_ORDER = %w[field premade box].freeze
+    NODE_LABEL = { 'field' => 'DOBLAR TUBO', 'premade' => 'CODO', 'box' => 'CAJA' }.freeze
+
+    # Cycle a node between field-bend -> premade elbow -> box.
+    def cycle_vertex_type(view)
       idx = @hover
       return if idx.nil?
 
-      @modes[idx] = @modes[idx].to_s == 'field' ? 'premade' : 'field'
+      cur = @modes[idx].to_s
+      cur = 'field' unless NODE_ORDER.include?(cur)
+      nxt = NODE_ORDER[(NODE_ORDER.index(cur) + 1) % NODE_ORDER.length]
+      @modes[idx] = nxt
+      # Box nodes need an active box; fall back to the current setting.
+      if nxt == 'box' && (@s[:box_key].nil? || @s[:box_key].to_s.empty?)
+        @s[:box_key] = Settings.box_key
+      end
       @dirty = true
-      @flash = "Vértice #{idx + 1}: #{@modes[idx] == 'field' ? 'DOBLAR TUBO' : 'CODO'}"
+      @flash = "Vértice #{idx + 1}: #{NODE_LABEL[nxt]}"
       update_ui
       view.invalidate
     end
@@ -389,8 +404,8 @@ module SkpEPlumb
         return
       end
 
-      hint = 'arrastra anclas=mover · clic en segmento=insertar · clic en vacío=extender · ' \
-             'Retroceso=borrar · Alt=codo/curva · Enter=aplicar'
+      hint = 'arrastra=mover · clic en segmento=insertar · clic en vacío=extender · ' \
+             'Retroceso=borrar · Alt=tipo de nodo (curva→codo→caja) · Enter=aplicar'
       msg = "Editar #{@s[:type]} #{@s[:size]}\" · #{hint}"
       msg = "#{@flash}  |  #{msg}" if @flash
       Sketchup.set_status_text(msg)

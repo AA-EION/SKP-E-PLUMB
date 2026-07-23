@@ -81,6 +81,9 @@ module SkpEPlumb
       auto_on = s[:auto_box] && !box_spec.nil?
       every = (s[:auto_box_every] || 2).to_i
       every = 2 if every < 1
+      # A valid box to use for explicit "box" nodes even if no active box is set.
+      box_key_eff = box_spec ? box_key : 'PLEXO_105'
+      box_spec_eff = box_spec || Catalog::BOXES['PLEXO_105']
 
       # Endpoints snapped to an existing box: end the tube at the box surface
       # and force a termination there.
@@ -90,10 +93,18 @@ module SkpEPlumb
         e = box_entry_point(box_conns[0], safe_dir(pts[0] - pts[1]))
         pts[0] = e if e
         force_start = true
+      elsif modes[0].to_s == 'box'
+        drop_box(model, g, pts[0], box_spec_eff, box_key_eff,
+                 auto_box_normal(model, pts, 0, normals, ctx, container))
+        force_start = true
       end
       if box_conns && box_conns[n - 1]
         e = box_entry_point(box_conns[n - 1], safe_dir(pts[n - 1] - pts[n - 2]))
         pts[n - 1] = e if e
+        force_end = true
+      elsif modes[n - 1].to_s == 'box'
+        drop_box(model, g, pts[n - 1], box_spec_eff, box_key_eff,
+                 auto_box_normal(model, pts, n - 1, normals, ctx, container))
         force_end = true
       end
 
@@ -120,27 +131,20 @@ module SkpEPlumb
           next
         end
 
+        # Explicit "box" node (set in the edit tool): insert a box here.
+        if modes[i].to_s == 'box'
+          current = add_box_break(g, model, pts, i, box_spec_eff, box_key_eff, normals, ctx, container, s, current)
+          bends_since_box = 0
+          next
+        end
+
         f = features[i]
         next if f.nil? # collinear vertex, absorbed into the straight run
 
         if auto_on && bends_since_box >= every
-          # RETIE pull box: the tube reaches the box, terminates (connector /
-          # locknut + bushing, or grounding bushing), and the run continues out
-          # the other side with its own termination. The box replaces the curve.
-          din = safe_dir(pts[i] - pts[i - 1])
-          dout = safe_dir(pts[i + 1] - pts[i])
-          li = (pts[i] - pts[i - 1]).length
-          lo = (pts[i + 1] - pts[i]).length
-          inset = [GeomUtil.mm([box_spec[:w], box_spec[:h]].min) / 2.0,
-                   0.4 * li, 0.4 * lo].min
-
-          nrm = auto_box_normal(model, pts, i, normals, ctx, container)
-          current << pts[i].offset(din, -inset)
-          render_continuous_path(g, current, ctx)
-          add_termination(g, pts[i].offset(din, -inset), din, ctx, s[:termination])
-          drop_box(model, g, pts[i], box_spec, box_key, nrm)
-          add_termination(g, pts[i].offset(dout, inset), dout.reverse, ctx, s[:termination])
-          current = [pts[i].offset(dout, inset)]
+          # RETIE pull box: replaces the curve — the tube reaches the box,
+          # terminates, and the run continues out the other side.
+          current = add_box_break(g, model, pts, i, box_spec, box_key, normals, ctx, container, s, current)
           bends_since_box = 0
         elsif f[:mode] == :field
           current << f[:t_in]
@@ -168,6 +172,27 @@ module SkpEPlumb
 
     def safe_dir(vec)
       vec.length.zero? ? Geom::Vector3d.new(1, 0, 0) : vec.normalize
+    end
+
+    # Insert a box at vertex i: the incoming tube reaches the box and
+    # terminates, a box is dropped (oriented to the surface), and the run
+    # continues out the other side with its own termination. Returns the new
+    # `current` path (starting just past the box). Shared by auto-box and by
+    # explicit "box" nodes set in the edit tool.
+    def add_box_break(g, model, pts, i, box_spec, box_key, normals, ctx, container, s, current)
+      din = safe_dir(pts[i] - pts[i - 1])
+      dout = safe_dir(pts[i + 1] - pts[i])
+      li = (pts[i] - pts[i - 1]).length
+      lo = (pts[i + 1] - pts[i]).length
+      inset = [GeomUtil.mm([box_spec[:w], box_spec[:h]].min) / 2.0, 0.4 * li, 0.4 * lo].min
+      nrm = auto_box_normal(model, pts, i, normals, ctx, container)
+
+      current << pts[i].offset(din, -inset)
+      render_continuous_path(g, current, ctx)
+      add_termination(g, pts[i].offset(din, -inset), din, ctx, s[:termination])
+      drop_box(model, g, pts[i], box_spec, box_key, nrm)
+      add_termination(g, pts[i].offset(dout, inset), dout.reverse, ctx, s[:termination])
+      [pts[i].offset(dout, inset)]
     end
 
     # Outward normal of the surface a box should mount on at vertex i. Prefers
