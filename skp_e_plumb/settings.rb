@@ -22,7 +22,8 @@ module SkpEPlumb
       'box_key'        => 'PLEXO_105',
       'segments'       => 24,
       'auto_box'       => false,   # RETIE: drop a box after every N curves
-      'auto_box_every' => 2
+      'auto_box_every' => 2,
+      'bom_mode'       => 'pieces' # 'pieces' | 'optimized'
     }.freeze
 
     @state = nil

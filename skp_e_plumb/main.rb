@@ -14,7 +14,7 @@ module SkpEPlumb
   dir = __dir__
   begin
     %w[
-      version catalog geom_util bom settings builder
+      version catalog geom_util bom settings builder cursors
       conduit_tool box_tool edit_tool ui_dialogs
     ].each { |f| require File.join(dir, "#{f}.rb") }
   rescue StandardError => e

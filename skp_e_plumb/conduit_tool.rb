@@ -43,6 +43,10 @@ module SkpEPlumb
       view.invalidate
     end
 
+    def onSetCursor
+      UI.set_cursor(Cursors.get('conduit'))
+    end
+
     def onCancel(_reason, view)
       if @pts.any?
         reset_run

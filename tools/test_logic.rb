@@ -118,7 +118,19 @@ two = Bom.summarize([
   { 'part' => 'pipe', 'type' => 'IMC', 'size' => '1', 'desc' => 'x', 'length_mm' => 3000.0, 'stock_m' => 3.0 },
   { 'part' => 'pipe', 'type' => 'IMC', 'size' => '1', 'desc' => 'x', 'length_mm' => 500.0, 'stock_m' => 3.0 }
 ])
-check('two drawn pieces -> 2 tubes') { two[:lines].first[:qty] == 2 }
+check('two drawn pieces -> 2 tubes (pieces mode)') { two[:lines].first[:qty] == 2 }
+
+# Optimized mode: four 1 m offcuts across the model reuse into ceil(4/3)=2 tubes.
+four = [
+  { 'part' => 'pipe', 'type' => 'EMT', 'size' => '3/4', 'desc' => 'x', 'length_mm' => 1000.0, 'stock_m' => 3.0 },
+  { 'part' => 'pipe', 'type' => 'EMT', 'size' => '3/4', 'desc' => 'x', 'length_mm' => 1000.0, 'stock_m' => 3.0 },
+  { 'part' => 'pipe', 'type' => 'EMT', 'size' => '3/4', 'desc' => 'x', 'length_mm' => 1000.0, 'stock_m' => 3.0 },
+  { 'part' => 'pipe', 'type' => 'EMT', 'size' => '3/4', 'desc' => 'x', 'length_mm' => 1000.0, 'stock_m' => 3.0 }
+]
+check('pieces mode: four 1m offcuts -> 4 tubes') { Bom.summarize(four, :pieces)[:lines].first[:qty] == 4 }
+check('optimized mode: four 1m offcuts -> 2 tubes') { Bom.summarize(four, :optimized)[:lines].first[:qty] == 2 }
+check('optimized mode reported in data') { Bom.summarize(four, :optimized)[:mode] == :optimized }
+check('total metres shown in both modes') { Bom.summarize(four, :optimized)[:lines].first[:detail].include?('4.00 m') }
 
 puts
 if $failures.zero?

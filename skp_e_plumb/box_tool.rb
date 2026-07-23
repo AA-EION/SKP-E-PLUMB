@@ -34,7 +34,24 @@ module SkpEPlumb
 
     def onLButtonDown(_flags, x, y, view)
       @ip.pick(view, x, y)
-      place_box(@ip.position.clone, @ip.face, view)
+      place_box(@ip.position.clone, world_face_normal, view)
+    end
+
+    # World-space normal of the picked face. face.normal is in the containing
+    # group/component's LOCAL space, so it must be transformed by the input
+    # point's transformation — otherwise boxes on rotated walls come out wrong.
+    def world_face_normal
+      face = @ip.face
+      return nil unless face
+
+      n = face.normal
+      begin
+        t = @ip.transformation
+        n = n.transform(t) if t
+      rescue StandardError
+        nil
+      end
+      n.length.zero? ? nil : n
     end
 
     def draw(view)
@@ -51,9 +68,13 @@ module SkpEPlumb
       Sketchup.active_model.select_tool(nil)
     end
 
+    def onSetCursor
+      UI.set_cursor(Cursors.get('box'))
+    end
+
     private
 
-    def place_box(origin, face, view)
+    def place_box(origin, normal, view)
       key = Settings.box_key
       spec = Catalog::BOXES[key]
       unless spec
@@ -62,8 +83,7 @@ module SkpEPlumb
       end
 
       model = Sketchup.active_model
-      # Lay the box on the picked face; otherwise on the ground plane.
-      normal = face && face.respond_to?(:normal) ? face.normal : Geom::Vector3d.new(0, 0, 1)
+      # `normal` is the world-space surface normal (or nil -> ground plane).
       normal = Geom::Vector3d.new(0, 0, 1) if normal.nil? || normal.length.zero?
 
       # Explicit basis: local +Z (box depth) -> surface normal, +Y -> up along
