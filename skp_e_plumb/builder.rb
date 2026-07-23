@@ -36,8 +36,8 @@ module SkpEPlumb
     # nil entries fall back to s[:bend_mode]. `normals` is an optional per-vertex
     # Array of world-space [x,y,z] surface normals (the face each point was drawn
     # on) used to mount boxes flush to that surface. Returns the container or nil.
-    def build_run(model, raw_pts, modes, s, normals = nil)
-      pts, modes, normals = clean_path(raw_pts, modes, normals)
+    def build_run(model, raw_pts, modes, s, normals = nil, box_conns = nil)
+      pts, modes, normals, box_conns = clean_path(raw_pts, modes, normals, box_conns)
       return nil if pts.length < 2
 
       type = s[:type]
@@ -82,9 +82,44 @@ module SkpEPlumb
       every = (s[:auto_box_every] || 2).to_i
       every = 2 if every < 1
 
+      # Endpoints snapped to an existing box: end the tube at the box surface
+      # and force a termination there.
+      force_start = false
+      force_end = false
+      if box_conns && box_conns[0]
+        e = box_entry_point(box_conns[0], safe_dir(pts[0] - pts[1]))
+        pts[0] = e if e
+        force_start = true
+      end
+      if box_conns && box_conns[n - 1]
+        e = box_entry_point(box_conns[n - 1], safe_dir(pts[n - 1] - pts[n - 2]))
+        pts[n - 1] = e if e
+        force_end = true
+      end
+
       current = [pts[0]]
       bends_since_box = 0
       (1..n - 2).each do |i|
+        # A vertex snapped to an existing box: the tube reaches the box and
+        # terminates into it; the run continues out the other face. Works even
+        # for a straight pass-through (e.g. a box on each side of a wall, where
+        # the conduit enters one face and exits the opposite one — "out the
+        # back"). Takes precedence over bends/auto-box.
+        if box_conns && box_conns[i]
+          box = box_conns[i]
+          din = safe_dir(pts[i] - pts[i - 1])
+          dout = safe_dir(pts[i + 1] - pts[i])
+          e_in = box_entry_point(box, din) || pts[i]
+          e_out = box_entry_point(box, dout.reverse) || pts[i]
+          current << e_in
+          render_continuous_path(g, current, ctx)
+          add_termination(g, e_in, din, ctx, s[:termination])
+          add_termination(g, e_out, dout.reverse, ctx, s[:termination])
+          current = [e_out]
+          bends_since_box = 0
+          next
+        end
+
         f = features[i]
         next if f.nil? # collinear vertex, absorbed into the straight run
 
@@ -124,10 +159,10 @@ module SkpEPlumb
       current << pts[n - 1]
       render_continuous_path(g, current, ctx)
 
-      add_termination(g, pts[0], pts[0] - pts[1], ctx, s[:termination]) if s[:terminate_start]
-      add_termination(g, pts[n - 1], pts[n - 1] - pts[n - 2], ctx, s[:termination]) if s[:terminate_end]
+      add_termination(g, pts[0], pts[0] - pts[1], ctx, s[:termination]) if s[:terminate_start] || force_start
+      add_termination(g, pts[n - 1], pts[n - 1] - pts[n - 2], ctx, s[:termination]) if s[:terminate_end] || force_end
 
-      store_run_meta(container, pts, modes, normals, s)
+      store_run_meta(container, pts, modes, normals, box_conns, s)
       container
     end
 
@@ -176,28 +211,67 @@ module SkpEPlumb
       nil
     end
 
+    # World point on `box`'s surface where a conduit approaching along
+    # `approach_world` (pointing toward the box) meets it. Uses the box's own
+    # size (from its stored box_key) and orientation. nil if not resolvable.
+    def box_entry_point(box, approach_world)
+      return nil unless box.respond_to?(:transformation) && approach_world.length > 0
+
+      key = box.get_attribute(Bom::DICT, 'box_key')
+      spec = key && Catalog::BOXES[key]
+      return nil unless spec
+
+      w = GeomUtil.mm(spec[:w])
+      h = GeomUtil.mm(spec[:h])
+      d = GeomUtil.mm(spec[:d])
+      bt = box.transformation
+      al = approach_world.normalize.transform(bt.inverse)
+      return nil if al.length.zero?
+
+      al = al.normalize
+      center = [0.0, 0.0, d / 2.0]
+      dir = [-al.x, -al.y, -al.z] # from box centre back toward the conduit
+      t = GeomUtil.ray_box_t(center, dir, [-w / 2.0, -h / 2.0, 0.0], [w / 2.0, h / 2.0, d])
+      return nil unless t
+
+      local = Geom::Point3d.new(center[0] + dir[0] * t, center[1] + dir[1] * t, center[2] + dir[2] * t)
+      local.transform(bt)
+    rescue StandardError
+      nil
+    end
+
     # Dedupe consecutive coincident points, carrying the matching bend mode and
     # surface normal so the parallel arrays stay aligned with the point array.
-    def clean_path(raw_pts, modes, normals = nil)
+    def clean_path(raw_pts, modes, normals = nil, box_conns = nil)
       out_pts = []
       out_modes = []
       out_normals = []
+      out_conns = []
       raw_pts.each_with_index do |p, i|
         next unless out_pts.empty? || out_pts.last.distance(p) > 1.0e-6
 
         out_pts << p
         out_modes << (modes && modes[i])
         out_normals << (normals && normals[i])
+        out_conns << (box_conns && box_conns[i])
       end
-      [out_pts, out_modes, out_normals]
+      [out_pts, out_modes, out_normals, out_conns]
     end
 
     # ---- editable run metadata -------------------------------------------
 
     # Persist the run definition on its container so it can be re-opened and
     # edited by anchors later.
-    def store_run_meta(group, pts, modes, normals, s)
+    def store_run_meta(group, pts, modes, normals, box_conns, s)
       group.set_attribute(RUN_DICT, 'run', true)
+      # Box connections stored by persistent id (0 = none) so edit/rebuild can
+      # re-link to the same box across save/load.
+      group.set_attribute(RUN_DICT, 'conn_pid', pts.each_index.map do |i|
+        b = box_conns && box_conns[i]
+        (b.respond_to?(:persistent_id) ? b.persistent_id : 0).to_i
+      rescue StandardError
+        0
+      end)
       group.set_attribute(RUN_DICT, 'px', pts.map { |p| p.x.to_f })
       group.set_attribute(RUN_DICT, 'py', pts.map { |p| p.y.to_f })
       group.set_attribute(RUN_DICT, 'pz', pts.map { |p| p.z.to_f })
@@ -248,6 +322,19 @@ module SkpEPlumb
         end
       end
 
+      pids = group.get_attribute(RUN_DICT, 'conn_pid')
+      model = group.model
+      box_conns = px.each_index.map do |i|
+        pid = pids && pids[i]
+        next nil unless pid && pid.to_i != 0 && model.respond_to?(:find_entity_by_persistent_id)
+
+        begin
+          model.find_entity_by_persistent_id(pid.to_i)
+        rescue StandardError
+          nil
+        end
+      end
+
       conn = group.get_attribute(RUN_DICT, 'connection').to_s
 
       s = {
@@ -265,7 +352,7 @@ module SkpEPlumb
         auto_box_every: group.get_attribute(RUN_DICT, 'auto_box_every', 2).to_i,
         box_key: group.get_attribute(RUN_DICT, 'box_key', '')
       }
-      { pts: pts, modes: modes, normals: normals, s: s }
+      { pts: pts, modes: modes, normals: normals, box_conns: box_conns, s: s }
     end
 
     # ---- feature computation ---------------------------------------------

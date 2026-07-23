@@ -186,6 +186,34 @@ module SkpEPlumb
                                 Geom::Vector3d.new(*z))
     end
 
+    # Distance t (>0) from an interior point `c` along unit `dir` to where the
+    # ray exits an axis-aligned box [mins..maxs]. Pure arrays; returns nil if no
+    # exit found. Used to find where a conduit meets a box's surface.
+    def ray_box_t(c, dir, mins, maxs)
+      t = nil
+      3.times do |i|
+        next if dir[i].abs < 1.0e-12
+
+        [mins[i], maxs[i]].each do |b|
+          tt = (b - c[i]) / dir[i]
+          next if tt <= 1.0e-9
+
+          ok = true
+          3.times do |j|
+            next if j == i
+
+            v = c[j] + dir[j] * tt
+            if v < mins[j] - 1.0e-6 || v > maxs[j] + 1.0e-6
+              ok = false
+              break
+            end
+          end
+          t = tt if ok && (t.nil? || tt < t)
+        end
+      end
+      t
+    end
+
     def cross3(a, b)
       [a[1] * b[2] - a[2] * b[1],
        a[2] * b[0] - a[0] * b[2],

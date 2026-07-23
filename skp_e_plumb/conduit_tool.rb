@@ -22,6 +22,8 @@ module SkpEPlumb
       @pts = []
       @modes = []
       @normals = [] # world-space normal of the face each point was placed on (or nil)
+      @box_conns = [] # box (group) each point snaps to, or nil
+      @snap_box = nil
       @ip = Sketchup::InputPoint.new
       @ip_prev = Sketchup::InputPoint.new
       @flash = nil
@@ -63,7 +65,8 @@ module SkpEPlumb
       else
         @ip.pick(view, x, y, @ip_prev)
       end
-      view.tooltip = @ip.tooltip
+      @snap_box = box_under(view, x, y)
+      view.tooltip = @snap_box ? 'Conectar a caja' : @ip.tooltip
       update_length_vcb
       view.invalidate
     end
@@ -74,7 +77,34 @@ module SkpEPlumb
       else
         @ip.pick(view, x, y, @ip_prev)
       end
-      add_point(@ip.position.clone, view)
+      @snap_box = box_under(view, x, y)
+      pos = @snap_box ? @snap_box.bounds.center : @ip.position
+      add_point(pos.clone, @snap_box, view)
+    end
+
+    # The top-level plugin box under the cursor (to snap/connect to), or nil.
+    # Only top-level boxes (whose transformation is world) are used, so entry
+    # geometry is computed correctly.
+    def box_under(view, x, y)
+      ph = view.pick_helper
+      ph.do_pick(x, y)
+      (0...ph.count).each do |i|
+        path = ph.path_at(i)
+        next unless path && path.first
+
+        return path.first if plugin_box?(path.first)
+      end
+      nil
+    rescue StandardError
+      nil
+    end
+
+    def plugin_box?(ent)
+      (ent.is_a?(Sketchup::Group) || ent.is_a?(Sketchup::ComponentInstance)) &&
+        ent.respond_to?(:get_attribute) &&
+        ent.get_attribute(Bom::DICT, 'part') == Bom::PART_BOX
+    rescue StandardError
+      false
     end
 
     def onLButtonDoubleClick(_flags, _x, _y, view)
@@ -115,11 +145,15 @@ module SkpEPlumb
       return if dir.length.zero?
 
       dir.normalize!
-      add_point(@pts.last.offset(dir, dist), view)
+      add_point(@pts.last.offset(dir, dist), nil, view)
     end
 
     def draw(view)
-      return if @pts.empty?
+      target = if @snap_box&.valid?
+                 @snap_box.bounds.center
+               elsif @ip.valid?
+                 @ip.position
+               end
 
       if @pts.length >= 2
         view.drawing_color = Sketchup::Color.new(31, 108, 176)
@@ -128,22 +162,28 @@ module SkpEPlumb
         view.draw(GL_LINE_STRIP, @pts)
       end
 
-      if @ip.valid? && !@pts.empty?
+      if target && !@pts.empty?
         view.drawing_color = Sketchup::Color.new(120, 120, 120)
         view.line_width = 2
         view.line_stipple = '_'
-        view.draw(GL_LINES, [@pts.last, @ip.position])
+        view.draw(GL_LINES, [@pts.last, target])
         view.line_stipple = ''
       end
 
-      draw_vertices(view)
-      @ip.draw(view) if @ip.valid?
+      draw_vertices(view) unless @pts.empty?
+
+      if @snap_box&.valid?
+        view.draw_points([@snap_box.bounds.center], 16, 1, Sketchup::Color.new(240, 130, 0))
+      elsif @ip.valid?
+        @ip.draw(view)
+      end
     end
 
     def getExtents
       bb = Geom::BoundingBox.new
       @pts.each { |p| bb.add(p) }
       bb.add(@ip.position) if @ip.valid?
+      bb.add(@snap_box.bounds.center) if @snap_box&.valid?
       bb
     end
 
@@ -162,10 +202,11 @@ module SkpEPlumb
       false
     end
 
-    def add_point(pt, view)
+    def add_point(pt, box, view)
       @pts << pt
       @modes << Settings.bend_mode
-      @normals << current_face_normal
+      @normals << (box ? nil : current_face_normal)
+      @box_conns << box
       @ip_prev = Sketchup::InputPoint.new(pt)
       update_ui
       view.invalidate
@@ -196,6 +237,7 @@ module SkpEPlumb
       @pts.pop
       @modes.pop
       @normals.pop
+      @box_conns.pop
       @ip_prev = @pts.empty? ? Sketchup::InputPoint.new : Sketchup::InputPoint.new(@pts.last)
       update_ui
       view.invalidate
@@ -205,6 +247,8 @@ module SkpEPlumb
       @pts = []
       @modes = []
       @normals = []
+      @box_conns = []
+      @snap_box = nil
       @ip_prev = Sketchup::InputPoint.new
     end
 
@@ -233,7 +277,7 @@ module SkpEPlumb
       }
 
       model.start_operation('SKP E-Plumb — Tubería', true)
-      group = Builder.build_run(model, @pts, @modes, s, @normals)
+      group = Builder.build_run(model, @pts, @modes, s, @normals, @box_conns)
       if group
         model.commit_operation
         @flash = 'Tubería creada. BOM actualizado.'

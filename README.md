@@ -16,7 +16,7 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 > (NEC / NOM / RETIE, etc.).*
 
 - Licencia: **GPL-3.0-or-later**
-- Versión: **1.4.0**
+- Versión: **1.5.0**
 - Formato de instalación: **`.rbz`**
 
 ---
@@ -59,6 +59,11 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 - **Cajas**:
   - **Plexo** (cajas plásticas IP55 para intemperie / PVC).
   - **Rawelt** (condulets tipo **C, LB, LL, LR, T, X** y cajas **FS / FD**).
+- **Conexión a cajas (snap)**: al dibujar, si pasas el cursor sobre una caja del
+  plugin, la tubería **se conecta** a ella (llega a la cara correcta con su
+  terminación). Una caja puede recibir **varias tuberías**; un tubo que atraviesa
+  la caja entra por una cara y **sale por la opuesta** (caja a cada lado de un
+  muro).
 - **Edición por anclas**: reabre cualquier tubería creada y **mueve, inserta o
   borra vértices, extiéndela y cambia curva↔codo por vértice**; la geometría y
   el BOM se **reconstruyen** al aplicar.
