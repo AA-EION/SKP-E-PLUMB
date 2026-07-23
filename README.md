@@ -1,5 +1,8 @@
 # SKP E-Plumb — Modelador de canalizaciones eléctricas + BOM para SketchUp
 
+[![Donar con PayPal](https://img.shields.io/badge/Donar-PayPal-0070BA?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?business=juanesgtgt2%40gmail.com&no_recurring=0&item_name=Apoyo%20a%20SKP%20E-Plumb&currency_code=USD)
+[![Licencia: GPL-3.0](https://img.shields.io/badge/Licencia-GPL--3.0-blue)](LICENSE)
+
 **SKP E-Plumb** es una extensión para **SketchUp 2026** (compatible con
 **macOS** y **Windows**) que permite dibujar **canalizaciones / tuberías
 eléctricas** de forma rápida e intuitiva y generar automáticamente una
@@ -217,6 +220,21 @@ tools/                    # Scripts de build, íconos y pruebas
   pieza por pieza).
 - Próximo: numeración de circuitos, longitud de conductores, cédulas por caja,
   reporte por planta.
+
+---
+
+## ❤️ Donaciones
+
+SKP E-Plumb es **software libre** (GPL-3.0). Si te resulta útil y quieres apoyar
+su desarrollo, puedes hacer una donación por PayPal — ¡gracias!
+
+<p>
+  <a href="https://www.paypal.com/donate/?business=juanesgtgt2%40gmail.com&no_recurring=0&item_name=Apoyo%20a%20SKP%20E-Plumb&currency_code=USD">
+    <img src="https://img.shields.io/badge/Donar%20con-PayPal-0070BA?logo=paypal&logoColor=white&style=for-the-badge" alt="Donar con PayPal">
+  </a>
+</p>
+
+- **PayPal:** [donar](https://www.paypal.com/donate/?business=juanesgtgt2%40gmail.com&no_recurring=0&item_name=Apoyo%20a%20SKP%20E-Plumb&currency_code=USD) · `juanesgtgt2@gmail.com`
 
 ---
 
