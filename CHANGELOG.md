@@ -4,6 +4,15 @@ Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.7.0] - 2026-07-23
+
+### Añadido
+- **Montaje sobrepuesto en pared** (Ajustes → *Montaje del tubo → Sobrepuesto en
+  pared*): al activarlo, el tubo se **desplaza hacia afuera** por el normal de la
+  superficie donde se dibujó (≈ el radio del tubo), quedando **apoyado sobre** la
+  pared/piso/techo en vez de medio enterrado. Se conserva al editar (el trazado
+  original se guarda sin el offset para no acumularlo).
+
 ## [1.6.0] - 2026-07-23
 
 ### Añadido
@@ -155,6 +164,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Diálogos `HtmlDialog` de Ajustes y BOM, barra de herramientas e íconos.
 - Empaquetado `.rbz`, pruebas de lógica offline y flujo de publicación en CI.
 
+[1.7.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.7.0
 [1.6.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.6.0
 [1.5.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.5.0
 [1.4.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.4.0

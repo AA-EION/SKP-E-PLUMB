@@ -16,7 +16,7 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 > (NEC / NOM / RETIE, etc.).*
 
 - Licencia: **GPL-3.0-or-later**
-- Versión: **1.6.0**
+- Versión: **1.7.0**
 - Formato de instalación: **`.rbz`**
 
 ---
@@ -34,6 +34,9 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
   - coloca una **copla montada sobre cada empalme** (un tubo termina, empieza el
     siguiente y encima queda la copla); y
   - cuenta en el BOM **un tubo por pieza dibujada** (más los metros totales).
+- **Montaje sobrepuesto**: opción para que el tubo quede **apoyado sobre** la
+  pared/piso/techo (no medio enterrado), desplazándolo por el normal de la
+  superficie donde se dibujó.
 - **Caja automática (RETIE)**: opción para que **tras cada N curvas** (por
   defecto 2) la tubería **llegue a una caja**, se coloque la **terminación**
   (conector/contratuerca + bushing normal o de aterrizaje) y **continúe** al

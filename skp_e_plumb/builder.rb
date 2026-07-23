@@ -68,6 +68,25 @@ module SkpEPlumb
         connection: conn
       }
 
+      # Keep the drawn path (pre-offset) for the editable metadata so repeated
+      # edits don't accumulate the surface-mount offset.
+      store_pts = pts.map(&:clone)
+
+      # Surface-mount: push each point that sits on a surface OUT along its
+      # normal by the pipe radius, so the tube rests ON the wall/floor instead
+      # of being half buried. Box-connection points (no normal) are left as-is.
+      if s[:surface_mount]
+        off = radius
+        pts = pts.each_with_index.map do |p, i|
+          nv = normals && normals[i]
+          if nv && (nv[0] != 0.0 || nv[1] != 0.0 || nv[2] != 0.0)
+            p.offset(Geom::Vector3d.new(nv[0], nv[1], nv[2]), off)
+          else
+            p
+          end
+        end
+      end
+
       n = pts.length
       features = compute_features(pts, modes, bend_r, s[:bend_mode])
 
@@ -166,7 +185,7 @@ module SkpEPlumb
       add_termination(g, pts[0], pts[0] - pts[1], ctx, s[:termination]) if s[:terminate_start] || force_start
       add_termination(g, pts[n - 1], pts[n - 1] - pts[n - 2], ctx, s[:termination]) if s[:terminate_end] || force_end
 
-      store_run_meta(container, pts, modes, normals, box_conns, s)
+      store_run_meta(container, store_pts, modes, normals, box_conns, s)
       container
     end
 
@@ -318,6 +337,7 @@ module SkpEPlumb
       group.set_attribute(RUN_DICT, 'auto_box', s[:auto_box] ? true : false)
       group.set_attribute(RUN_DICT, 'auto_box_every', (s[:auto_box_every] || 2).to_i)
       group.set_attribute(RUN_DICT, 'box_key', s[:box_key].to_s)
+      group.set_attribute(RUN_DICT, 'surface_mount', s[:surface_mount] ? true : false)
       group
     end
 
@@ -375,7 +395,8 @@ module SkpEPlumb
         terminate_end: group.get_attribute(RUN_DICT, 'terminate_end', true),
         auto_box: group.get_attribute(RUN_DICT, 'auto_box', false),
         auto_box_every: group.get_attribute(RUN_DICT, 'auto_box_every', 2).to_i,
-        box_key: group.get_attribute(RUN_DICT, 'box_key', '')
+        box_key: group.get_attribute(RUN_DICT, 'box_key', ''),
+        surface_mount: group.get_attribute(RUN_DICT, 'surface_mount', false)
       }
       { pts: pts, modes: modes, normals: normals, box_conns: box_conns, s: s }
     end
