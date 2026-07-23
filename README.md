@@ -16,7 +16,7 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 > (NEC / NOM / RETIE, etc.).*
 
 - Licencia: **GPL-3.0-or-later**
-- Versión: **1.5.0**
+- Versión: **1.6.0**
 - Formato de instalación: **`.rbz`**
 
 ---
@@ -140,7 +140,7 @@ las **anclas** de su trazado:
 | Insertar un vértice | **Clic sobre un segmento** |
 | Extender la tubería | **Clic en espacio vacío** (se agrega al extremo más cercano) |
 | Borrar un vértice | Coloca el cursor sobre el ancla y pulsa **Retroceso/Supr** |
-| Cambiar curva ↔ codo de un vértice | Cursor sobre el ancla + **Alt / Option** |
+| Cambiar tipo de nodo (curva → codo → caja) | Cursor sobre el ancla + **Alt / Option** (azul=curva, verde=codo, naranja=caja) |
 | Aplicar cambios | **Enter** (reconstruye geometría y BOM) |
 | Cancelar | **Esc** |
 
