@@ -89,7 +89,7 @@ module SkpEPlumb
       case key
       when 'stock_m', 'bend_radius_mm' then value.to_f
       when 'segments', 'auto_box_every' then value.to_i
-      when 'auto_box' then value.to_s == 'true'
+      when 'auto_box', 'surface_mount' then value.to_s == 'true'
       else value
       end
     end
@@ -129,6 +129,7 @@ module SkpEPlumb
       field_ck = s.field_bend? ? 'checked' : ''
       premade_ck = s.field_bend? ? '' : 'checked'
       auto_ck = s.auto_box? ? 'checked' : ''
+      surf_ck = s.surface_mount? ? 'checked' : ''
 
       <<~HTML
         <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
@@ -216,6 +217,13 @@ module SkpEPlumb
                      onchange="setV('auto_box_every',this.value)"> curva(s) coloca la <b>caja activa</b></span>
           </div>
           <div class="hint">Inserta la caja seleccionada arriba tras cada N curvas del trazado.</div>
+
+          <label>Montaje del tubo</label>
+          <div class="modes" style="align-items:center">
+            <label style="flex:0 0 auto"><input type="checkbox" id="surface_mount" #{surf_ck}
+              onclick="setV('surface_mount', this.checked ? 'true' : 'false')"> Sobrepuesto en pared</label>
+          </div>
+          <div class="hint">Apoya el tubo SOBRE la superficie donde se dibuja (no medio enterrado).</div>
 
           <hr>
           <div class="btns">

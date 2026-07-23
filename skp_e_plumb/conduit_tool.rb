@@ -273,7 +273,7 @@ module SkpEPlumb
         terminate_start: Settings.termination != :none,
         terminate_end: Settings.termination != :none,
         auto_box: Settings.auto_box?, auto_box_every: Settings.auto_box_every,
-        box_key: Settings.box_key
+        box_key: Settings.box_key, surface_mount: Settings.surface_mount?
       }
 
       model.start_operation('SKP E-Plumb — Tubería', true)

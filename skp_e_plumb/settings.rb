@@ -23,7 +23,8 @@ module SkpEPlumb
       'segments'       => 24,
       'auto_box'       => false,   # RETIE: drop a box after every N curves
       'auto_box_every' => 2,
-      'bom_mode'       => 'pieces' # 'pieces' | 'optimized'
+      'bom_mode'       => 'pieces', # 'pieces' | 'optimized'
+      'surface_mount'  => false    # offset the tube out of the surface it's on
     }.freeze
 
     @state = nil
@@ -99,6 +100,11 @@ module SkpEPlumb
     def auto_box_every
       e = state['auto_box_every'].to_i
       e < 1 ? 2 : e
+    end
+
+    def surface_mount?
+      v = state['surface_mount']
+      v == true || v == 'true' || v == 1
     end
 
     def field_bend?
