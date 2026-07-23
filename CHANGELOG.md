@@ -4,6 +4,21 @@ Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.5.0] - 2026-07-23
+
+### Añadido
+- **Conexión de tubería a caja (snap)**: al dibujar, si el cursor pasa sobre una
+  **caja del plugin** (de nivel superior), la tubería hace **snap** a ella (se
+  resalta el punto) y al hacer clic se **conecta**: el tubo llega a la **cara
+  correcta** de la caja según por dónde entra y se coloca la **terminación**.
+  - Una misma caja puede **recibir varias tuberías** (incluso de distinto
+    diámetro): cada tubería se conecta por separado.
+  - En un **paso recto que atraviesa la caja**, el tubo **entra por una cara y
+    sale por la opuesta** ("por detrás" en cajas montadas en muro), cubriendo el
+    caso de **caja a cada lado de un muro**.
+  - Las conexiones se guardan por `persistent_id`, así se conservan al **editar**
+    la tubería y entre guardados del modelo.
+
 ## [1.4.0] - 2026-07-22
 
 ### Añadido
@@ -129,6 +144,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Diálogos `HtmlDialog` de Ajustes y BOM, barra de herramientas e íconos.
 - Empaquetado `.rbz`, pruebas de lógica offline y flujo de publicación en CI.
 
+[1.5.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.5.0
 [1.4.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.4.0
 [1.3.1]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.3.1
 [1.3.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.3.0

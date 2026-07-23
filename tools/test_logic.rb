@@ -103,6 +103,18 @@ check('degenerate normal falls back to identity') do
   approx3(b[0], [1, 0, 0]) && approx3(b[1], [0, 1, 0]) && approx3(b[2], [0, 0, 1])
 end
 
+# ---- ray/box exit (conduit meets box surface) ------------------------------
+# Box local frame: x,y in [-2,2], z in [0,4]; centre at (0,0,2).
+mins = [-2.0, -2.0, 0.0]
+maxs = [2.0, 2.0, 4.0]
+check('ray exits +x face at t=2') { (GU.ray_box_t([0.0, 0.0, 2.0], [1.0, 0, 0], mins, maxs) - 2.0).abs < 1e-9 }
+check('ray exits -z (back) at t=2') { (GU.ray_box_t([0.0, 0.0, 2.0], [0, 0, -1.0], mins, maxs) - 2.0).abs < 1e-9 }
+check('ray exits +z (front) at t=2') { (GU.ray_box_t([0.0, 0.0, 2.0], [0, 0, 1.0], mins, maxs) - 2.0).abs < 1e-9 }
+check('diagonal ray exits at nearest face') do
+  t = GU.ray_box_t([0.0, 0.0, 2.0], GU.norm3([1.0, 0.0, 0.2]), mins, maxs)
+  t && t > 1.9 && t < 2.2
+end
+
 # ---- exports ---------------------------------------------------------------
 csv = Bom.to_csv(data)
 check('CSV has header + a row per line') { csv.lines.length == data[:lines].length + 1 }

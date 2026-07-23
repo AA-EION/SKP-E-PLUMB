@@ -168,6 +168,7 @@ module SkpEPlumb
       @pts = []
       @modes = []
       @normals = []
+      @box_conns = []
       @s = nil
       @drag = nil
       @hover = nil
@@ -288,6 +289,8 @@ module SkpEPlumb
       @modes << default while @modes.length < @pts.length
       @normals = (meta[:normals] || []).dup
       @normals << nil while @normals.length < @pts.length
+      @box_conns = (meta[:box_conns] || []).dup
+      @box_conns << nil while @box_conns.length < @pts.length
       @s = meta[:s]
       @drag = nil
       @hover = nil
@@ -303,10 +306,12 @@ module SkpEPlumb
         @pts.unshift(pos.clone)
         @modes.unshift(mode)
         @normals.unshift(nil)
+        @box_conns.unshift(nil)
       else
         @pts.push(pos.clone)
         @modes.push(mode)
         @normals.push(nil)
+        @box_conns.push(nil)
       end
       @dirty = true
       @flash = 'Vértice añadido (extender).'
@@ -317,6 +322,7 @@ module SkpEPlumb
       @pts.insert(index + 1, point3d)
       @modes.insert(index + 1, (@s[:bend_mode] || 'field').to_s)
       @normals.insert(index + 1, nil)
+      @box_conns.insert(index + 1, nil)
       @dirty = true
       @flash = 'Vértice insertado.'
       update_ui
@@ -333,6 +339,7 @@ module SkpEPlumb
       @pts.delete_at(idx)
       @modes.delete_at(idx)
       @normals.delete_at(idx)
+      @box_conns.delete_at(idx)
       @hover = nil
       @drag = nil
       @dirty = true
@@ -362,7 +369,7 @@ module SkpEPlumb
 
       @model.start_operation('SKP E-Plumb — Editar tubería', true)
       @run.erase! if @run.valid?
-      newrun = Builder.build_run(@model, @pts, @modes, s, @normals)
+      newrun = Builder.build_run(@model, @pts, @modes, s, @normals, @box_conns)
       if newrun
         @model.commit_operation
         @run = newrun
