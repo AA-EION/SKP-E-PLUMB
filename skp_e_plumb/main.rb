@@ -149,7 +149,25 @@ module SkpEPlumb
     end
 
     def cmd_about
-      UI::Command.new('Acerca de…') { show_about }
+      UI::Command.new('Acerca de…') { safe('Acerca de') { UIDialogs.show_about } }
+    end
+
+    # After an update (installed VERSION differs from the last seen), show the
+    # changelog for this version once. Runs on a timer so it never blocks load.
+    def schedule_whatsnew
+      seen = Sketchup.read_default(Settings::SECTION, 'seen_version', '')
+      return if seen == SkpEPlumb::VERSION
+
+      UI.start_timer(3, false) do
+        begin
+          Sketchup.write_default(Settings::SECTION, 'seen_version', SkpEPlumb::VERSION)
+          UIDialogs.show_whatsnew(SkpEPlumb::VERSION)
+        rescue StandardError
+          nil
+        end
+      end
+    rescue StandardError
+      nil
     end
 
     # Silent once-a-day check on startup (if enabled); notifies only when there
@@ -171,21 +189,6 @@ module SkpEPlumb
       end
     rescue StandardError
       nil
-    end
-
-    def show_about
-      msg = <<~TXT
-        SKP E-Plumb v#{SkpEPlumb::VERSION}
-        Modelador de canalizaciones eléctricas y BOM para SketchUp.
-
-        Soporta EMT, IMC, Galvanizado (RMC) y PVC eléctrico con coplas,
-        codos, curvas de campo, bushings, contratuercas y cajas
-        (Plexo / Rawelt), respetando el tramo comercial del inventario.
-        Las tuberías se pueden editar por anclas (herramienta Editar).
-
-        Licencia GPL-3.0-or-later · © 2026 AA-EION
-      TXT
-      UI.messagebox(msg)
     end
 
     def build
@@ -236,6 +239,7 @@ module SkpEPlumb
   unless defined?(@ui_built) && @ui_built
     begin
       Menus.build
+      Menus.schedule_whatsnew
       Menus.schedule_update_check
     rescue StandardError => e
       UI.messagebox("SKP E-Plumb no pudo crear el menú/barra:\n\n#{e.class}: #{e.message}")
