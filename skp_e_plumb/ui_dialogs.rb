@@ -14,6 +14,8 @@ module SkpEPlumb
   module UIDialogs
     @settings_dlg = nil
     @bom_dlg = nil
+    @about_dlg = nil
+    @whatsnew_dlg = nil
 
     module_function
 
@@ -294,6 +296,115 @@ module SkpEPlumb
       trace = (err.backtrace || [])[0, 6].join("\n")
       UI.messagebox("SKP E-Plumb — error en #{context}:\n\n#{err.class}: " \
                     "#{err.message}\n\n#{trace}")
+    end
+
+    # ---- About & What's New ----------------------------------------------
+
+    # "What's new" for the given version (shown once after an update).
+    def show_whatsnew(version)
+      notes = Updater.changelog_notes(version)
+      body = notes ? md_to_html(notes) : "<p>Versión <b>#{Bom.h(version)}</b> instalada.</p>"
+
+      @whatsnew_dlg = UI::HtmlDialog.new(
+        dialog_title: "SKP E-Plumb — Novedades v#{version}",
+        preferences_key: 'com.aaeion.skpeplumb.whatsnew',
+        scrollable: true, resizable: true,
+        width: 500, height: 560, min_width: 360, min_height: 320,
+        style: UI::HtmlDialog::STYLE_DIALOG
+      )
+      @whatsnew_dlg.add_action_callback('donate') { |_c| UI.openURL(Updater::DONATE_URL); nil }
+      @whatsnew_dlg.add_action_callback('close') { |_c| @whatsnew_dlg.close; nil }
+      @whatsnew_dlg.set_html(info_html("Novedades — v#{version}", body, show_close: true))
+      @whatsnew_dlg.show
+      @whatsnew_dlg.center if @whatsnew_dlg.respond_to?(:center)
+    rescue StandardError => e
+      report_error(e, 'Novedades')
+    end
+
+    def show_about
+      if @about_dlg&.visible?
+        @about_dlg.bring_to_front
+        return
+      end
+
+      body = <<~HTML
+        <p><b>SKP E-Plumb</b> v#{SkpEPlumb::VERSION}</p>
+        <p>Modelador de canalizaciones eléctricas y BOM para SketchUp.
+        Soporta EMT, IMC, Galvanizado (RMC) y PVC con coplas, codos, curvas de
+        campo, bushings, contratuercas y cajas (Plexo / Rawelt), respetando el
+        tramo comercial del inventario.</p>
+        <p>Licencia <b>GPL-3.0-or-later</b> · © 2026 AA-EION</p>
+        <p><a href="https://github.com/AA-EION/SKP-E-PLUMB" target="_blank">github.com/AA-EION/SKP-E-PLUMB</a></p>
+      HTML
+
+      @about_dlg = UI::HtmlDialog.new(
+        dialog_title: 'SKP E-Plumb — Acerca de',
+        preferences_key: 'com.aaeion.skpeplumb.about',
+        scrollable: true, resizable: true,
+        width: 440, height: 420, min_width: 340, min_height: 280,
+        style: UI::HtmlDialog::STYLE_DIALOG
+      )
+      @about_dlg.add_action_callback('donate') { |_c| UI.openURL(Updater::DONATE_URL); nil }
+      @about_dlg.add_action_callback('updates') { |_c| Updater.check(interactive: true); nil }
+      @about_dlg.add_action_callback('close') { |_c| @about_dlg.close; nil }
+      @about_dlg.set_html(info_html('Acerca de', body, show_updates: true))
+      @about_dlg.show
+      @about_dlg.center if @about_dlg.respond_to?(:center)
+    rescue StandardError => e
+      report_error(e, 'Acerca de')
+    end
+
+    # Shared page shell for About / What's New with a PayPal donate button.
+    def info_html(title, body_html, show_close: false, show_updates: false)
+      close_btn = show_close ? '<button class="ghost" onclick="sketchup.close()">Cerrar</button>' : ''
+      upd_btn = show_updates ? '<button class="ghost" onclick="sketchup.updates()">Buscar actualizaciones</button>' : ''
+      <<~HTML
+        <!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body{font-family:Segoe UI,Helvetica,Arial,sans-serif;margin:0;color:#1b1e24;background:#f6f7f9;font-size:13px}
+          header{background:#2b6cb0;color:#fff;padding:12px 16px}
+          header h1{margin:0;font-size:15px}
+          .wrap{padding:14px 16px}
+          .wrap p{margin:0 0 10px;line-height:1.45}
+          .h{font-weight:700;margin:12px 0 4px}
+          .li{margin:2px 0 2px 6px}
+          .sp{height:6px}
+          code{background:#eceff3;padding:1px 4px;border-radius:4px;font-size:12px}
+          a{color:#2b6cb0}
+          .bar{position:sticky;bottom:0;background:#f6f7f9;border-top:1px solid #dfe3e8;padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap}
+          button{padding:9px 12px;border:0;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+          .paypal{background:#0070ba;color:#fff}
+          .ghost{background:#e8ebf0;color:#222}
+        </style></head><body>
+        <header><h1>SKP E-Plumb — #{Bom.h(title)}</h1></header>
+        <div class="wrap">#{body_html}</div>
+        <div class="bar">
+          <button class="paypal" onclick="sketchup.donate()">❤ Donar con PayPal</button>
+          #{upd_btn}#{close_btn}
+        </div>
+        </body></html>
+      HTML
+    end
+
+    # Minimal markdown -> HTML for the changelog block (headings, bullets, bold).
+    def md_to_html(md)
+      md.to_s.lines.map do |raw|
+        line = Bom.h(raw.rstrip)
+        if line =~ /^\#\#\#\s*(.+)/
+          "<div class='h'>#{md_inline(Regexp.last_match(1))}</div>"
+        elsif line =~ /^\s*[-*]\s+(.+)/
+          "<div class='li'>• #{md_inline(Regexp.last_match(1))}</div>"
+        elsif line.strip.empty?
+          "<div class='sp'></div>"
+        else
+          "<div>#{md_inline(line)}</div>"
+        end
+      end.join
+    end
+
+    def md_inline(str)
+      str.gsub(/\*\*(.+?)\*\*/, '<b>\1</b>').gsub(/`(.+?)`/, '<code>\1</code>')
     end
 
     def register_bom_callbacks(dlg)

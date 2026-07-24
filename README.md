@@ -19,7 +19,7 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 > (NEC / NOM / RETIE, etc.).*
 
 - Licencia: **GPL-3.0-or-later**
-- Versión: **1.8.0**
+- Versión: **1.9.0**
 - Formato de instalación: **`.rbz`**
 
 ---
@@ -119,6 +119,8 @@ Windows):
   automáticamente (`Sketchup.install_from_archive`) o abrir la página.
 - Un **aviso automático** (1×/día) revisa si hay novedades; se puede desactivar
   en *Ajustes → Actualizaciones*.
+- Tras instalar una versión nueva, aparece una ventana **"Novedades"** con el
+  changelog de esa versión. En **Acerca de** hay un botón **Donar con PayPal**.
 
 > La auto-actualización *gestionada por el Administrador de extensiones* de
 > SketchUp requiere publicar en el **Extension Warehouse** (y firma de Trimble).

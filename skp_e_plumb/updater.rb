@@ -14,8 +14,36 @@ module SkpEPlumb
     REPO = 'AA-EION/SKP-E-PLUMB'
     API_LATEST = "https://api.github.com/repos/#{REPO}/releases/latest".freeze
     RELEASES_URL = "https://github.com/#{REPO}/releases/latest".freeze
+    DONATE_URL = 'https://www.paypal.com/donate/?business=juanesgtgt2%40gmail.com' \
+                 '&no_recurring=0&item_name=Apoyo%20a%20SKP%20E-Plumb&currency_code=USD'.freeze
 
     module_function
+
+    # The changelog section for a given version, read from the CHANGELOG.md that
+    # ships inside the plugin (added at build time). Returns the raw markdown of
+    # that version's block, or nil.
+    def changelog_notes(version)
+      path = File.join(__dir__, 'CHANGELOG.md')
+      return nil unless File.exist?(path)
+
+      text = File.read(path)
+      text = text.force_encoding('UTF-8') if text.respond_to?(:force_encoding)
+      out = []
+      capture = false
+      text.each_line do |ln|
+        if ln =~ /^\#\#\s*\[?#{Regexp.escape(version)}\]?/
+          capture = true
+          next
+        elsif capture && ln =~ /^\#\#\s/
+          break
+        end
+        out << ln if capture
+      end
+      s = out.join.strip
+      s.empty? ? nil : s
+    rescue StandardError
+      nil
+    end
 
     def current_version
       SkpEPlumb::VERSION

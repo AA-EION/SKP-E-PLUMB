@@ -13,3 +13,6 @@ Thumbs.db
 /dist/
 /tmp/
 *.tmp
+
+# Changelog copied into the plugin at build time (source of truth is root)
+/skp_e_plumb/CHANGELOG.md

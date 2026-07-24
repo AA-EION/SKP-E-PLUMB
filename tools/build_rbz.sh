@@ -19,6 +19,10 @@ mkdir -p "$DIST"
 RBZ="$DIST/SKP-E-Plumb.rbz"
 rm -f "$DIST"/*.rbz
 
+# Ship the changelog inside the plugin so it can show "What's new" after an
+# update (gitignored copy; the source of truth is the root CHANGELOG.md).
+cp -f "$ROOT/CHANGELOG.md" "$ROOT/skp_e_plumb/CHANGELOG.md"
+
 # Only ship the plugin payload — never tools/, .git, dist, docs, tests.
 zip -r -X "$RBZ" \
     skp_e_plumb.rb \

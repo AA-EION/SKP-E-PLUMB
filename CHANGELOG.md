@@ -4,6 +4,17 @@ Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.9.0] - 2026-07-24
+
+### Añadido
+- **Novedades tras actualizar**: al abrir una versión nueva, el plugin muestra
+  una ventana **"Novedades vX.Y.Z"** con el **changelog de esa versión** (una
+  sola vez por versión). El changelog viaja **dentro del `.rbz`**, así se ve sin
+  conexión.
+- **"Acerca de"** es ahora una ventana con **botón "❤ Donar con PayPal"** (igual
+  que en el repositorio) y acceso directo a **Buscar actualizaciones**.
+- La ventana de Novedades también incluye el botón de donación.
+
 ## [1.8.0] - 2026-07-23
 
 ### Añadido
@@ -176,6 +187,7 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 - Diálogos `HtmlDialog` de Ajustes y BOM, barra de herramientas e íconos.
 - Empaquetado `.rbz`, pruebas de lógica offline y flujo de publicación en CI.
 
+[1.9.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.9.0
 [1.8.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.8.0
 [1.7.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.7.0
 [1.6.0]: https://github.com/aa-eion/skp-e-plumb/releases/tag/v1.6.0
