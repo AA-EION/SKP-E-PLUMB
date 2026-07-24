@@ -7,6 +7,8 @@ $LOAD_PATH.unshift(File.expand_path('..', __dir__))
 require 'skp_e_plumb/catalog'
 require 'skp_e_plumb/bom'
 require 'skp_e_plumb/geom_util'
+require 'skp_e_plumb/version'
+require 'skp_e_plumb/updater'
 
 include SkpEPlumb
 
@@ -114,6 +116,14 @@ check('diagonal ray exits at nearest face') do
   t = GU.ray_box_t([0.0, 0.0, 2.0], GU.norm3([1.0, 0.0, 0.2]), mins, maxs)
   t && t > 1.9 && t < 2.2
 end
+
+# ---- updater version compare -----------------------------------------------
+check('1.7.0 > 1.6.0') { Updater.newer?('1.7.0', '1.6.0') }
+check('1.10.0 > 1.9.0 (numeric, not lexical)') { Updater.newer?('1.10.0', '1.9.0') }
+check('2.0.0 > 1.99.99') { Updater.newer?('2.0.0', '1.99.99') }
+check('equal is not newer') { !Updater.newer?('1.7.0', '1.7.0') }
+check('older is not newer') { !Updater.newer?('1.6.5', '1.7.0') }
+check('tag with v stripped compares') { Updater.cmp('1.7.0', '1.7.0').zero? }
 
 # ---- exports ---------------------------------------------------------------
 csv = Bom.to_csv(data)

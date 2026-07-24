@@ -24,7 +24,8 @@ module SkpEPlumb
       'auto_box'       => false,   # RETIE: drop a box after every N curves
       'auto_box_every' => 2,
       'bom_mode'       => 'pieces', # 'pieces' | 'optimized'
-      'surface_mount'  => false    # offset the tube out of the surface it's on
+      'surface_mount'  => false,   # offset the tube out of the surface it's on
+      'check_updates'  => true     # check GitHub Releases for new versions
     }.freeze
 
     @state = nil
@@ -104,6 +105,11 @@ module SkpEPlumb
 
     def surface_mount?
       v = state['surface_mount']
+      v == true || v == 'true' || v == 1
+    end
+
+    def check_updates?
+      v = state['check_updates']
       v == true || v == 'true' || v == 1
     end
 

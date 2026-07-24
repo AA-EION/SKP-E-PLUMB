@@ -19,7 +19,7 @@ obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
 > (NEC / NOM / RETIE, etc.).*
 
 - Licencia: **GPL-3.0-or-later**
-- Versión: **1.7.0**
+- Versión: **1.8.0**
 - Formato de instalación: **`.rbz`**
 
 ---
@@ -108,6 +108,22 @@ Diámetros comerciales: `1/2"`, `3/4"`, `1"`, `1-1/4"`, `1-1/2"`, `2"`,
 
 > Compatible con SketchUp 2017 en adelante (usa `HtmlDialog`), probado para
 > **SketchUp 2026** en macOS y Windows.
+
+### Actualizaciones
+
+El plugin puede **auto-actualizarse desde los Releases de GitHub** (macOS y
+Windows):
+
+- **Extensiones → SKP E-Plumb → Buscar actualizaciones…** consulta la última
+  versión y, si hay una nueva, ofrece **descargar e instalar** el `.rbz`
+  automáticamente (`Sketchup.install_from_archive`) o abrir la página.
+- Un **aviso automático** (1×/día) revisa si hay novedades; se puede desactivar
+  en *Ajustes → Actualizaciones*.
+
+> La auto-actualización *gestionada por el Administrador de extensiones* de
+> SketchUp requiere publicar en el **Extension Warehouse** (y firma de Trimble).
+> Este mecanismo propio no la sustituye, pero cumple la misma función sin el
+> Warehouse.
 
 ---
 
