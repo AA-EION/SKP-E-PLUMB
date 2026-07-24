@@ -15,7 +15,7 @@ module SkpEPlumb
   begin
     %w[
       version catalog geom_util bom settings builder cursors
-      conduit_tool box_tool edit_tool ui_dialogs
+      conduit_tool box_tool edit_tool ui_dialogs updater
     ].each { |f| require File.join(dir, "#{f}.rb") }
   rescue StandardError => e
     UI.messagebox("SKP E-Plumb no pudo cargar:\n\n#{e.class}: #{e.message}\n\n" \
@@ -139,8 +139,38 @@ module SkpEPlumb
       end
     end
 
+    def cmd_check_update
+      c = UI::Command.new('Buscar actualizaciones…') do
+        safe('Buscar actualizaciones') { Updater.check(interactive: true) }
+      end
+      c.tooltip = 'Verificar si hay una versión nueva en GitHub'
+      c.status_bar_text = 'Consulta los Releases de GitHub y ofrece descargar/instalar la actualización.'
+      c
+    end
+
     def cmd_about
       UI::Command.new('Acerca de…') { show_about }
+    end
+
+    # Silent once-a-day check on startup (if enabled); notifies only when there
+    # is a newer version. Runs on a timer so it never blocks loading.
+    def schedule_update_check
+      return unless Settings.check_updates?
+
+      today = Time.now.strftime('%Y-%m-%d')
+      last = Sketchup.read_default(Settings::SECTION, 'last_update_check', '')
+      return if last == today
+
+      UI.start_timer(6, false) do
+        begin
+          Sketchup.write_default(Settings::SECTION, 'last_update_check', today)
+          Updater.check(interactive: false)
+        rescue StandardError
+          nil
+        end
+      end
+    rescue StandardError
+      nil
     end
 
     def show_about
@@ -171,6 +201,7 @@ module SkpEPlumb
       menu.add_separator
       menu.add_item(cmd_settings)
       menu.add_item(cmd_diagnostics)
+      menu.add_item(cmd_check_update)
       menu.add_item(cmd_about)
 
       toolbar = UI::Toolbar.new('SKP E-Plumb')
@@ -205,6 +236,7 @@ module SkpEPlumb
   unless defined?(@ui_built) && @ui_built
     begin
       Menus.build
+      Menus.schedule_update_check
     rescue StandardError => e
       UI.messagebox("SKP E-Plumb no pudo crear el menú/barra:\n\n#{e.class}: #{e.message}")
     end
