@@ -31,7 +31,9 @@ jobs:
           ruby-version: '3.3'
 
       - name: Run tests
-        run: ruby tools/test_logic.rb
+        run: |
+          ruby tools/test_logic.rb
+          ruby tools/test_builder.rb
 
       - name: Build .rbz
         run: ./tools/build_rbz.sh

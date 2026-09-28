@@ -27,6 +27,9 @@ jobs:
       - name: Run offline logic tests
         run: ruby tools/test_logic.rb
 
+      - name: Run geometry tests (SketchUp API stub)
+        run: ruby tools/test_builder.rb
+
       - name: Build .rbz
         run: ./tools/build_rbz.sh
 

@@ -5,19 +5,19 @@ require 'sketchup.rb'
 begin
   require 'json'
 rescue LoadError
-  # JSON is optional; UIDialogs has a manual fallback encoder.
+  # JSON ships with SketchUp's Ruby; UIDialogs has a manual fallback encoder.
 end
 
 module SkpEPlumb
-  # Load order matters: data -> geometry -> bom -> settings -> builder -> tools
-  # -> ui -> menus. Any failure here is surfaced so it is never silent.
+  # Load order matters: data -> codes -> geometry -> bom -> settings -> builder
+  # -> tools -> ui -> menus. Any failure here is surfaced so it is never silent.
   dir = __dir__
   begin
     %w[
-      version catalog geom_util bom settings builder cursors
+      version catalog codes geom_util bom settings builder picker cursors
       conduit_tool box_tool edit_tool ui_dialogs updater
     ].each { |f| require File.join(dir, "#{f}.rb") }
-  rescue StandardError => e
+  rescue StandardError, ScriptError => e
     UI.messagebox("SKP E-Plumb no pudo cargar:\n\n#{e.class}: #{e.message}\n\n" \
                   "#{(e.backtrace || [])[0, 6].join("\n")}")
     raise
@@ -40,6 +40,15 @@ module SkpEPlumb
       UI.messagebox("SKP E-Plumb — error en #{context}:\n\n#{e.class}: #{e.message}\n\n#{trace}")
     end
 
+    def activate_tool(name)
+      tool = case name
+             when 'draw' then ConduitTool.new
+             when 'box' then BoxTool.new
+             when 'edit' then EditTool.new
+             end
+      Sketchup.active_model.select_tool(tool) if tool
+    end
+
     def apply_icon(cmd, base)
       small = File.join(ICONS, "#{base}_16.png")
       large = File.join(ICONS, "#{base}_24.png")
@@ -47,94 +56,56 @@ module SkpEPlumb
       cmd.large_icon = large if File.exist?(large)
     end
 
-    def cmd_draw
-      c = UI::Command.new('Dibujar tubería') do
-        safe('Dibujar tubería') { Sketchup.active_model.select_tool(ConduitTool.new) }
-      end
-      c.tooltip = 'Dibujar tubería / canalización eléctrica'
-      c.status_bar_text = 'Clic para marcar el trazado. Alt/Option cambia entre doblar tubo y codo prefabricado.'
-      apply_icon(c, 'conduit')
-      c
-    end
-
-    def cmd_edit
-      c = UI::Command.new('Editar tubería') do
-        safe('Editar tubería') { Sketchup.active_model.select_tool(EditTool.new) }
-      end
-      c.tooltip = 'Editar por anclas una tubería existente'
-      c.status_bar_text = 'Clic en una tubería; arrastra anclas, inserta/borra vértices, extiende y aplica con Enter.'
-      apply_icon(c, 'edit')
-      c
-    end
-
-    def cmd_box
-      c = UI::Command.new('Colocar caja') do
-        safe('Colocar caja') { Sketchup.active_model.select_tool(BoxTool.new) }
-      end
-      c.tooltip = 'Colocar caja (Plexo / Rawelt)'
-      c.status_bar_text = 'Clic para ubicar la caja seleccionada en Ajustes.'
-      apply_icon(c, 'box')
-      c
-    end
-
-    def cmd_toggle
-      c = UI::Command.new('Cambiar modo de curva') do
-        safe('Cambiar modo de curva') do
+    # Commands are created once and shared by the menu and the toolbar.
+    def commands
+      @commands ||= {
+        draw: command('Dibujar tubería', 'conduit',
+                      'Dibuja una tubería haciendo clic sobre muros, pisos y techos',
+                      'Clic = punto · Doble clic/Enter = crear · Ctrl/Option = curva/codo · ' \
+                      'Flechas = bloquear eje · Clic derecho = opciones') { activate_tool('draw') },
+        box: command('Colocar caja', 'box', 'Coloca la caja activa sobre una superficie',
+                     'Clic = colocar · Ctrl/Option/Tab = girar 90° · Clic derecho = elegir caja') { activate_tool('box') },
+        edit: command('Editar tubería', 'edit', 'Edita una tubería por anclas',
+                      'Clic en una tubería; arrastra anclas, inserta, borra, extiende y aplica con Enter.') do
+          activate_tool('edit')
+        end,
+        bend: command('Alternar curva / codo', 'bend', 'Alterna doblar tubo ↔ codo prefabricado',
+                      'Cambia cómo se resuelven las próximas curvas.') do
           mode = Settings.toggle_bend_mode!
           UIDialogs.refresh_settings
-          Sketchup.set_status_text("Modo de curva: #{mode == :field ? 'DOBLAR TUBO' : 'CODO PREFABRICADO'}")
-        end
-      end
-      c.tooltip = 'Alternar doblar tubo / codo prefabricado'
-      c.status_bar_text = 'Cambia cómo se resuelven las curvas al dibujar.'
-      apply_icon(c, 'bend')
-      c
+          Sketchup.set_status_text("Curvas: #{mode == :field ? 'DOBLAR TUBO' : 'CODO PREFABRICADO'}")
+        end,
+        bom: command('Materiales y revisión', 'bom', 'Lista de materiales y revisión normativa',
+                     'Genera la lista de materiales del modelo y revisa la norma.') { UIDialogs.show_bom },
+        panel: command('Panel de ajustes…', 'settings', 'Panel de SKP E-Plumb',
+                       'Norma, tubería, curvas, cajas, conductores.') { UIDialogs.show_settings }
+      }
     end
 
-    def cmd_bom
-      c = UI::Command.new('Ver BOM') { safe('Ver BOM') { UIDialogs.show_bom } }
-      c.tooltip = 'Ver lista de materiales (BOM)'
-      c.status_bar_text = 'Genera y muestra la lista de materiales del modelo.'
-      apply_icon(c, 'bom')
-      c
-    end
-
-    def cmd_export_csv
-      c = UI::Command.new('Exportar BOM (CSV)') { safe('Exportar CSV') { UIDialogs.export_bom(:csv) } }
-      c.tooltip = 'Exportar BOM a CSV'
-      c
-    end
-
-    def cmd_export_html
-      c = UI::Command.new('Exportar BOM (HTML)') { safe('Exportar HTML') { UIDialogs.export_bom(:html) } }
-      c.tooltip = 'Exportar BOM a HTML'
-      c
-    end
-
-    def cmd_settings
-      c = UI::Command.new('Ajustes…') { safe('Ajustes') { UIDialogs.show_settings } }
-      c.tooltip = 'Ajustes de SKP E-Plumb'
-      c.status_bar_text = 'Tipo de canalización, diámetro, tramo de stock, radio de curvatura, cajas.'
-      apply_icon(c, 'settings')
+    def command(title, icon, tooltip, status, &block)
+      c = UI::Command.new(title) { safe(title) { block.call } }
+      c.tooltip = tooltip
+      c.status_bar_text = status
+      apply_icon(c, icon)
       c
     end
 
     def cmd_diagnostics
       UI::Command.new('Diagnóstico…') do
         safe('Diagnóstico') do
+          model = Sketchup.active_model
+          runs = 0
+          Bom.each_run(model.entities) { runs += 1 }
           info = [
             "SKP E-Plumb v#{SkpEPlumb::VERSION}",
             "Ruby: #{RUBY_VERSION}",
             "SketchUp: #{Sketchup.version}",
             "HtmlDialog: #{defined?(UI::HtmlDialog) ? 'disponible' : 'NO disponible'}",
-            "Módulos: Catalog=#{defined?(Catalog) ? 'ok' : '-'}, " \
-              "Builder=#{defined?(Builder) ? 'ok' : '-'}, " \
-              "UIDialogs=#{defined?(UIDialogs) ? 'ok' : '-'}",
-            '',
-            'Se abrirá el diálogo de Ajustes para comprobar la UI.'
+            "JSON: #{defined?(JSON) ? 'ok' : 'NO'}",
+            "Norma activa: #{Codes.profile(Settings.profile)[:label]}",
+            "Tuberías en el modelo: #{runs}"
           ]
           UI.messagebox(info.join("\n"))
-          UIDialogs.show_settings
         end
       end
     end
@@ -144,7 +115,6 @@ module SkpEPlumb
         safe('Buscar actualizaciones') { Updater.check(interactive: true) }
       end
       c.tooltip = 'Verificar si hay una versión nueva en GitHub'
-      c.status_bar_text = 'Consulta los Releases de GitHub y ofrece descargar/instalar la actualización.'
       c
     end
 
@@ -192,29 +162,27 @@ module SkpEPlumb
     end
 
     def build
+      c = commands
       menu = UI.menu('Extensions').add_submenu('SKP E-Plumb')
-      menu.add_item(cmd_draw)
-      menu.add_item(cmd_edit)
-      menu.add_item(cmd_box)
-      menu.add_item(cmd_toggle)
+      menu.add_item(c[:draw])
+      menu.add_item(c[:box])
+      menu.add_item(c[:edit])
+      menu.add_item(c[:bend])
       menu.add_separator
-      menu.add_item(cmd_bom)
-      menu.add_item(cmd_export_csv)
-      menu.add_item(cmd_export_html)
+      menu.add_item(c[:bom])
+      menu.add_item(c[:panel])
       menu.add_separator
-      menu.add_item(cmd_settings)
       menu.add_item(cmd_diagnostics)
       menu.add_item(cmd_check_update)
       menu.add_item(cmd_about)
 
       toolbar = UI::Toolbar.new('SKP E-Plumb')
-      toolbar.add_item(cmd_draw)
-      toolbar.add_item(cmd_edit)
-      toolbar.add_item(cmd_box)
-      toolbar.add_item(cmd_toggle)
+      toolbar.add_item(c[:draw])
+      toolbar.add_item(c[:box])
+      toolbar.add_item(c[:edit])
       toolbar.add_separator
-      toolbar.add_item(cmd_bom)
-      toolbar.add_item(cmd_settings)
+      toolbar.add_item(c[:bom])
+      toolbar.add_item(c[:panel])
       show_toolbar(toolbar)
     end
 

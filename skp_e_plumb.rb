@@ -29,15 +29,19 @@ module SkpEPlumb
   PLUGIN_ROOT = File.dirname(__FILE__).freeze
   PLUGIN_DIR  = File.join(PLUGIN_ROOT, 'skp_e_plumb').freeze
 
+  # Single source of truth for the version (shown in the Extension Manager).
+  require File.join(PLUGIN_DIR, 'version.rb')
+
   # Human facing metadata --------------------------------------------------
   EXT_NAME    = 'SKP E-Plumb — Electrical Conduit & BOM'
-  EXT_VERSION = '1.0.0'
+  EXT_VERSION = VERSION
   EXT_CREATOR = 'AA-EION'
   EXT_COPYRIGHT = '© 2026 AA-EION — GPL-3.0-or-later'
   EXT_DESCRIPTION =
-    'Draw electrical conduit runs (PVC, EMT, IMC, Galvanized/RMC) with ' \
-    'correct couplings, elbows, bends, bushings and boxes, and generate a ' \
-    'Bill of Materials (BOM) that respects your stock pipe length.'
+    'Draw electrical conduit runs (EMT, IMC, RMC, PVC, metric PVC) laid on ' \
+    'walls, floors and ceilings with correct couplings, elbows, bends, ' \
+    'bushings, supports, boxes and conductors; check them against NTC 2050 + ' \
+    'RETIE, NEC or IEC 60364 and generate a Bill of Materials.'
 
   unless defined?(@loaded) && @loaded
     loader = File.join(PLUGIN_DIR, 'main.rb')

@@ -5,26 +5,26 @@ module SkpEPlumb
   # EditTool
   # ---------------------------------------------------------------------------
   # Re-open a conduit run created by SKP E-Plumb and edit it by anchors. The
-  # run stores its centreline + settings (see Builder.store_run_meta), so this
-  # tool loads that definition, lets the user reshape it, and rebuilds the
-  # geometry and BOM tags in place.
+  # run stores its centreline, surfaces and settings (Builder.store_run_meta),
+  # so this tool reshapes that definition and rebuilds geometry + BOM.
   #
-  # Interactions (no letter/modifier keys required, for macOS/Windows parity):
-  #   * Click a run ....... load it for editing (anchors appear).
-  #   * Drag an anchor .... move that vertex.
-  #   * Click a segment ... insert a new anchor there.
-  #   * Click empty space . extend the run from its nearest end.
-  #   * Backspace/Delete .. remove the anchor under the cursor.
-  #   * Alt / Option ...... toggle that vertex between field-bend and elbow.
-  #   * Enter ............. apply (rebuild geometry + BOM).
-  #   * Esc ............... drop the current selection / exit.
+  #   Clic en una tubería .... load it (anchors appear)
+  #   Arrastrar un ancla ..... move that vertex (drop it on a box to connect)
+  #   Clic en un segmento .... insert an anchor there
+  #   Clic en vacío/superficie extend the run from its nearest end
+  #   Retroceso / Supr ....... delete the anchor under the cursor
+  #   Ctrl / Option .......... anchor type: curve -> elbow -> box
+  #   Enter .................. apply          Esc ... leave the run
+  #   Clic derecho ........... all of the above + "apply current settings"
   # ===========================================================================
   class EditTool
-    HANDLE_PX = 11      # pixel radius to grab an anchor
-    SEGMENT_PX = 8      # pixel distance to hit a segment
+    HANDLE_PX = 11
+    SEGMENT_PX = 8
     KEY_ENTER = 13
     KEY_BACKSPACE = 8
-    WIN_ALT = 18
+
+    NODE_ORDER = %w[field premade box].freeze
+    NODE_LABEL = { 'field' => 'curva de campo', 'premade' => 'codo prefabricado', 'box' => 'caja' }.freeze
 
     def activate
       @model = Sketchup.active_model
@@ -35,6 +35,7 @@ module SkpEPlumb
     end
 
     def deactivate(view)
+      offer_apply(view)
       view.invalidate
     end
 
@@ -53,6 +54,7 @@ module SkpEPlumb
 
     def onCancel(_reason, view)
       if @run
+        offer_apply(view)
         reset_all
         update_ui
         view.invalidate
@@ -62,18 +64,21 @@ module SkpEPlumb
     end
 
     def onMouseMove(_flags, x, y, view)
-      if @run.nil?
-        @ip.pick(view, x, y)
-        view.invalidate
-        return
-      end
-
-      if @drag
-        @ip.pick(view, x, y)
-        @pts[@drag] = @ip.position
+      @ip.pick(view, x, y)
+      if @run && @drag
+        box = Picker.box_under(view, x, y)
+        if box
+          @pts[@drag] = Builder.box_surface_point(box)
+          bn = Builder.box_world_normal(box)
+          @normals[@drag] = bn ? [bn] : []
+        else
+          pos, normals = Picker.surface_point(view, @ip, x, y)
+          @pts[@drag] = pos if pos
+          @normals[@drag] = normals
+        end
+        @box_conns[@drag] = box
         @dirty = true
-      else
-        @ip.pick(view, x, y)
+      elsif @run
         @hover = anchor_at(view, x, y)
       end
       view.tooltip = @ip.tooltip
@@ -90,13 +95,11 @@ module SkpEPlumb
       if idx
         @drag = idx
         @hover = idx
-      else
-        seg = segment_at(view, x, y)
-        if seg
-          insert_vertex(seg[0], seg[1])
-        else
-          append_vertex(@ip.position)
-        end
+      elsif (seg = segment_at(view, x, y))
+        insert_vertex(seg[0], seg[1])
+      elsif @ip.valid?
+        pos, normals = Picker.surface_point(view, @ip, x, y)
+        append_vertex(pos, normals) if pos
       end
       view.invalidate
     end
@@ -105,6 +108,7 @@ module SkpEPlumb
       return unless @drag
 
       @drag = nil
+      update_ui
       view.invalidate
     end
 
@@ -114,16 +118,43 @@ module SkpEPlumb
 
       if key == KEY_ENTER
         rebuild(view)
-        true
-      elsif alt_key?(key)
-        cycle_vertex_type(view)
-        true
-      elsif delete_key?(key)
-        delete_vertex(view)
-        true
+      elsif defined?(COPY_MODIFIER_KEY) && key == COPY_MODIFIER_KEY
+        cycle_vertex_type(@hover, view)
+      elsif key == KEY_BACKSPACE || (defined?(VK_DELETE) && key == VK_DELETE)
+        delete_vertex(@hover, view)
       else
-        false
+        return false
       end
+      true
+    end
+
+    def getMenu(menu, _flags = nil, x = nil, y = nil, view = nil)
+      view ||= @model.active_view
+      unless @run
+        menu.add_item('Haz clic en una tubería para editarla') {}
+        return true
+      end
+      idx = x && y ? anchor_at(view, x, y) : @hover
+      if idx
+        @hover = idx
+        sub = menu.add_submenu("Ancla #{idx + 1}")
+        NODE_ORDER.each do |m|
+          id = sub.add_item(NODE_LABEL[m].capitalize) { set_vertex_type(idx, m, view) }
+          sub.set_validation_proc(id) { @modes[idx].to_s == m ? MF_CHECKED : MF_UNCHECKED }
+        end
+        sub.add_item('Eliminar ancla') { delete_vertex(idx, view) }
+      end
+      menu.add_item('Aplicar ajustes actuales a esta tubería (tipo, diámetro, montaje…)') do
+        apply_current_settings(view)
+      end
+      menu.add_separator
+      menu.add_item('Aplicar cambios (Enter)') { rebuild(view) }
+      menu.add_item('Descartar cambios') do
+        reset_all
+        update_ui
+        view.invalidate
+      end
+      true
     end
 
     def draw(view)
@@ -140,15 +171,10 @@ module SkpEPlumb
       end
 
       @pts.each_with_index do |p, i|
-        color = if i == @hover || i == @drag
-                  Sketchup::Color.new(240, 130, 0)
-                else
-                  mode_color(@modes[i])
-                end
+        color = i == @hover || i == @drag ? Sketchup::Color.new(240, 130, 0) : mode_color(@modes[i])
         view.draw_points([p], 12, 2, color)
       end
-
-      @ip.draw(view) if @ip.valid?
+      @ip.draw(view) if @ip.valid? && @drag
     end
 
     def getExtents
@@ -176,29 +202,23 @@ module SkpEPlumb
       @flash = nil
     end
 
-    def alt_key?(key)
-      return true if key == WIN_ALT
-      return true if defined?(COPY_MODIFIER_KEY) && key == COPY_MODIFIER_KEY
+    def offer_apply(view)
+      return unless @run && @dirty
 
-      false
-    end
-
-    def delete_key?(key)
-      return true if key == KEY_BACKSPACE
-      return true if defined?(VK_DELETE) && key == VK_DELETE
-
-      false
+      res = UI.messagebox('Hay cambios sin aplicar en la tubería. ¿Aplicarlos?', MB_YESNO)
+      rebuild(view) if res == IDYES
+    rescue StandardError
+      nil
     end
 
     def mode_color(mode)
       case mode.to_s
-      when 'premade' then Sketchup::Color.new(47, 133, 90)  # green = elbow
-      when 'box'     then Sketchup::Color.new(240, 130, 0)  # orange = box
-      else Sketchup::Color.new(60, 90, 200)                 # blue = field bend
+      when 'premade' then Sketchup::Color.new(47, 133, 90)
+      when 'box'     then Sketchup::Color.new(240, 130, 0)
+      else Sketchup::Color.new(60, 90, 200)
       end
     end
 
-    # Index of the anchor within HANDLE_PX pixels of (x, y), or nil.
     def anchor_at(view, x, y)
       best = nil
       bestd = HANDLE_PX
@@ -213,8 +233,7 @@ module SkpEPlumb
       best
     end
 
-    # Returns [segment_index, point3d_on_segment] if (x, y) is near a segment
-    # (but not near a vertex), else nil.
+    # [segment_index, point3d_on_segment] if (x, y) is near a segment.
     def segment_at(view, x, y)
       return nil if @pts.length < 2
 
@@ -224,23 +243,19 @@ module SkpEPlumb
         a = view.screen_coords(@pts[i])
         b = view.screen_coords(@pts[i + 1])
         d, t = point_seg_dist_2d(x, y, a.x, a.y, b.x, b.y)
-        next if t <= 0.02 || t >= 0.98 # too close to a vertex
+        next if t <= 0.02 || t >= 0.98
 
-        if d < bestd
-          bestd = d
-          # interpolate the real 3D point by the same parameter
-          va = @pts[i]
-          vb = @pts[i + 1]
-          p3d = Geom::Point3d.new(va.x + (vb.x - va.x) * t,
-                                  va.y + (vb.y - va.y) * t,
-                                  va.z + (vb.z - va.z) * t)
-          best = [i, p3d]
-        end
+        next unless d < bestd
+
+        bestd = d
+        va = @pts[i]
+        vb = @pts[i + 1]
+        best = [i, Geom::Point3d.new(va.x + (vb.x - va.x) * t, va.y + (vb.y - va.y) * t,
+                                     va.z + (vb.z - va.z) * t)]
       end
       best
     end
 
-    # 2D distance from (px,py) to segment (ax,ay)-(bx,by); returns [dist, t].
     def point_seg_dist_2d(px, py, ax, ay, bx, by)
       dx = bx - ax
       dy = by - ay
@@ -248,11 +263,8 @@ module SkpEPlumb
       return [Math.hypot(px - ax, py - ay), 0.0] if len2 <= 1.0e-9
 
       t = ((px - ax) * dx + (py - ay) * dy) / len2
-      t = 0.0 if t < 0.0
-      t = 1.0 if t > 1.0
-      cx = ax + dx * t
-      cy = ay + dy * t
-      [Math.hypot(px - cx, py - cy), t]
+      t = t.clamp(0.0, 1.0)
+      [Math.hypot(px - (ax + dx * t), py - (ay + dy * t)), t]
     end
 
     def pick_run(view, x, y)
@@ -263,19 +275,17 @@ module SkpEPlumb
         path = ph.path_at(i)
         next unless path
 
-        found = path.reverse.find do |e|
+        container = path.reverse.find do |e|
           (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) && Builder.run?(e)
         end
-        if found
-          container = found
-          break
-        end
+        break if container
       end
 
       if container
         load_run(container, view)
       else
-        UI.messagebox('Haz clic sobre una tubería creada con SKP E-Plumb para editarla.')
+        @flash = 'Haz clic sobre una tubería creada con SKP E-Plumb.'
+        update_ui
       end
     end
 
@@ -288,90 +298,91 @@ module SkpEPlumb
 
       @run = container
       @pts = meta[:pts].map(&:clone)
-      @modes = meta[:modes].map(&:to_s)
       default = (meta[:s][:bend_mode] || 'field').to_s
+      @modes = meta[:modes].map(&:to_s)
       @modes << default while @modes.length < @pts.length
-      @normals = (meta[:normals] || []).dup
-      @normals << nil while @normals.length < @pts.length
-      @box_conns = (meta[:box_conns] || []).dup
+      @normals = meta[:normals].map(&:dup)
+      @normals << [] while @normals.length < @pts.length
+      @box_conns = meta[:box_conns].dup
       @box_conns << nil while @box_conns.length < @pts.length
       @s = meta[:s]
       @drag = nil
       @hover = nil
       @dirty = false
-      @flash = 'Tubería cargada para edición.'
+      @flash = 'Tubería cargada.'
+      @model.selection.clear
       update_ui
       view.invalidate
     end
 
-    def append_vertex(pos)
+    def append_vertex(pos, normals)
       mode = (@s[:bend_mode] || 'field').to_s
       if @pts.first.distance(pos) < @pts.last.distance(pos)
         @pts.unshift(pos.clone)
         @modes.unshift(mode)
-        @normals.unshift(nil)
+        @normals.unshift(normals)
         @box_conns.unshift(nil)
       else
         @pts.push(pos.clone)
         @modes.push(mode)
-        @normals.push(nil)
+        @normals.push(normals)
         @box_conns.push(nil)
       end
-      @dirty = true
-      @flash = 'Vértice añadido (extender).'
-      update_ui
+      mark('Ancla añadida (extender).')
     end
 
+    # A vertex inserted on a segment lies on that segment's surface.
     def insert_vertex(index, point3d)
+      dir = GeomUtil.to_a3(@pts[index + 1] - @pts[index])
+      n = GeomUtil.segment_normal(@normals[index], @normals[index + 1], dir)
       @pts.insert(index + 1, point3d)
       @modes.insert(index + 1, (@s[:bend_mode] || 'field').to_s)
-      @normals.insert(index + 1, nil)
+      @normals.insert(index + 1, n ? [n] : [])
       @box_conns.insert(index + 1, nil)
-      @dirty = true
-      @flash = 'Vértice insertado.'
-      update_ui
+      mark('Ancla insertada.')
     end
 
-    def delete_vertex(view)
-      idx = @hover
-      return if idx.nil?
+    def delete_vertex(idx, view)
+      return if idx.nil? || idx >= @pts.length
+
       if @pts.length <= 2
-        UI.messagebox('Una tubería necesita al menos dos puntos.')
+        @flash = 'Una tubería necesita al menos dos puntos.'
+        update_ui
         return
       end
-
-      @pts.delete_at(idx)
-      @modes.delete_at(idx)
-      @normals.delete_at(idx)
-      @box_conns.delete_at(idx)
+      [@pts, @modes, @normals, @box_conns].each { |a| a.delete_at(idx) }
       @hover = nil
       @drag = nil
-      @dirty = true
-      @flash = 'Vértice eliminado.'
-      update_ui
+      mark('Ancla eliminada.')
       view.invalidate
     end
 
-    NODE_ORDER = %w[field premade box].freeze
-    NODE_LABEL = { 'field' => 'DOBLAR TUBO', 'premade' => 'CODO', 'box' => 'CAJA' }.freeze
-
-    # Cycle a node between field-bend -> premade elbow -> box.
-    def cycle_vertex_type(view)
-      idx = @hover
+    def cycle_vertex_type(idx, view)
       return if idx.nil?
 
-      cur = @modes[idx].to_s
-      cur = 'field' unless NODE_ORDER.include?(cur)
-      nxt = NODE_ORDER[(NODE_ORDER.index(cur) + 1) % NODE_ORDER.length]
-      @modes[idx] = nxt
-      # Box nodes need an active box; fall back to the current setting.
-      if nxt == 'box' && (@s[:box_key].nil? || @s[:box_key].to_s.empty?)
-        @s[:box_key] = Settings.box_key
-      end
-      @dirty = true
-      @flash = "Vértice #{idx + 1}: #{NODE_LABEL[nxt]}"
-      update_ui
+      cur = NODE_ORDER.include?(@modes[idx].to_s) ? @modes[idx].to_s : 'field'
+      set_vertex_type(idx, NODE_ORDER[(NODE_ORDER.index(cur) + 1) % NODE_ORDER.length], view)
+    end
+
+    def set_vertex_type(idx, mode, view)
+      @modes[idx] = mode
+      @s[:box_key] = Settings.box_key if mode == 'box' && @s[:box_key].to_s.empty?
+      mark("Ancla #{idx + 1}: #{NODE_LABEL[mode]}")
       view.invalidate
+    end
+
+    def apply_current_settings(view)
+      Settings.load!
+      keep = { bend_mode: @s[:bend_mode] }
+      @s = Settings.run_options.merge(keep)
+      mark("Ajustes aplicados: #{Catalog.size_label(@s[:type], @s[:size])}. Enter para reconstruir.")
+      view.invalidate
+    end
+
+    def mark(msg)
+      @dirty = true
+      @flash = msg
+      update_ui
     end
 
     def rebuild(view)
@@ -383,13 +394,20 @@ module SkpEPlumb
       s[:terminate_end] = !no_term
 
       @model.start_operation('SKP E-Plumb — Editar tubería', true)
-      @run.erase! if @run.valid?
-      newrun = Builder.build_run(@model, @pts, @modes, s, @normals, @box_conns)
+      begin
+        @run.erase! if @run.valid?
+        newrun = Builder.build_run(@model, @pts, @modes, s, @normals, @box_conns)
+      rescue StandardError => e
+        @model.abort_operation
+        UIDialogs.report_error(e, 'editar tubería')
+        return
+      end
       if newrun
         @model.commit_operation
         @run = newrun
         @dirty = false
-        @flash = 'Tubería actualizada. BOM recalculado.'
+        issues = Bom.review_meta(Bom.read(newrun, Bom::RUN_DICT))
+        @flash = issues.empty? ? 'Tubería actualizada ✓' : "Tubería actualizada · ⚠ #{issues.first[:msg]}"
       else
         @model.abort_operation
         @flash = 'No se pudo reconstruir la tubería.'
@@ -400,13 +418,15 @@ module SkpEPlumb
 
     def update_ui
       if @run.nil?
-        Sketchup.set_status_text('SKP E-Plumb · Editar: haz clic en una tubería para editarla.')
+        msg = 'SKP E-Plumb · Editar: haz clic en una tubería.'
+        msg = "#{@flash}  |  #{msg}" if @flash
+        Sketchup.set_status_text(msg)
         return
       end
 
-      hint = 'arrastra=mover · clic en segmento=insertar · clic en vacío=extender · ' \
-             'Retroceso=borrar · Alt=tipo de nodo (curva→codo→caja) · Enter=aplicar'
-      msg = "Editar #{@s[:type]} #{@s[:size]}\" · #{hint}"
+      hint = 'Arrastrar ancla = mover · Clic en segmento = insertar · Clic fuera = extender · ' \
+             'Retroceso = borrar · Ctrl/Option = tipo de ancla · Enter = aplicar · Clic derecho = opciones'
+      msg = "Editando #{Catalog.size_label(@s[:type], @s[:size])}#{@dirty ? ' (sin aplicar)' : ''} · #{hint}"
       msg = "#{@flash}  |  #{msg}" if @flash
       Sketchup.set_status_text(msg)
     end
