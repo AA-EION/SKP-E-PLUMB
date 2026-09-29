@@ -38,13 +38,33 @@ jobs:
       - name: Build .rbz
         run: ./tools/build_rbz.sh
 
-      - name: Create GitHub Release with .rbz
+      # Release text: this version's CHANGELOG section, the upgrade
+      # instructions, and GitHub's "What's Changed" + "Full Changelog" (the
+      # format of earlier releases). Re-running for an existing tag updates it.
+      - name: Compose release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          VER="${TAG#v}"
+          NOTES="$(awk -v h="## [$VER]" 'index($0,h)==1 {f=1; next} f && /^## / {exit} f' CHANGELOG.md)"
+          GENERATED="$(gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+                        -f tag_name="$TAG" --jq .body || true)"
+          {
+            echo "## Novedades — v$VER"
+            if [ -n "$NOTES" ]; then echo "$NOTES"; else echo; echo "Ver CHANGELOG.md."; fi
+            echo; echo '---'; echo
+            cat .github/release-notes.md
+            if [ -n "$GENERATED" ]; then echo; echo '---'; echo; echo "$GENERATED"; fi
+          } > dist/release-body.md
+          cat dist/release-body.md
+
+      - name: Create or update GitHub Release with .rbz
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           name: SKP E-Plumb ${{ github.event.inputs.tag || github.ref_name }}
           files: dist/SKP-E-Plumb.rbz
-          # Release page = the .rbz + upgrade instructions only (the full
-          # changelog ships inside the plugin and shows as "Novedades").
-          body_path: .github/release-notes.md
+          body_path: dist/release-body.md
           generate_release_notes: false
