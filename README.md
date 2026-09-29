@@ -3,94 +3,87 @@
 [![Donar con PayPal](https://img.shields.io/badge/Donar-PayPal-0070BA?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?business=juanesgtgt2%40gmail.com&no_recurring=0&item_name=Apoyo%20a%20SKP%20E-Plumb&currency_code=USD)
 [![Licencia: GPL-3.0](https://img.shields.io/badge/Licencia-GPL--3.0-blue)](LICENSE)
 
-**SKP E-Plumb** es una extensión para **SketchUp 2026** (compatible con
-**macOS** y **Windows**) que permite dibujar **canalizaciones / tuberías
-eléctricas** de forma rápida e intuitiva y generar automáticamente una
-**lista de materiales (BOM)** que respeta el **tramo comercial de tubería**
-que tienes en inventario.
+**SKP E-Plumb** es una extensión para **SketchUp** (2019 o posterior, probada
+para **SketchUp 2026** en **macOS** y **Windows**) para dibujar
+**canalizaciones eléctricas** sobre muros, pisos y techos, **revisarlas contra
+la norma** (**NTC 2050 + RETIE**, **NEC** o **IEC 60364**) y generar la
+**lista de materiales**: tubos por tramo comercial, uniones, codos, conectores,
+boquillas, soportes, cajas y **conductores** con su código de colores.
 
-Soporta **PVC eléctrico, EMT, IMC y Galvanizado (RMC)** representando
-correctamente cada tipo de unión y accesorio: coplas, codos, curvas hechas en
-obra, bushings (aislantes y de aterrizaje), contratuercas y cajas
-(**Plexo** y **Rawelt**).
-
-> ⚡ *Herramienta de modelado y estimación. No sustituye el cálculo ni la
-> revisión de un profesional ni el cumplimiento del código eléctrico local
-> (NEC / NOM / RETIE, etc.).*
+> ⚡ *Herramienta de modelado, estimación y apoyo a la revisión. No sustituye el
+> diseño ni el cálculo de un profesional, ni la inspección de la instalación
+> (RETIE / autoridad local).*
 
 - Licencia: **GPL-3.0-or-later**
-- Versión: **1.9.0**
+- Versión: **2.0.0**
 - Formato de instalación: **`.rbz`**
 
 ---
 
 ## ✨ Características
 
-- **Dibujo intuitivo**: marca el trazado con clics; la tubería, coplas,
-  codos y terminaciones se generan solas.
-- **Diámetro configurable** por medida comercial (1/2" … 4") con diámetro
-  exterior real por tipo de canalización.
-- **Inventario / tramo de stock**: define el largo máximo de tubo disponible
-  (p. ej. **3 m**). El plugin:
-  - **grafica cada tubo como una pieza independiente** de ≤ el largo de stock,
-    para que veas dónde queda cada tubo;
-  - coloca una **copla montada sobre cada empalme** (un tubo termina, empieza el
-    siguiente y encima queda la copla); y
-  - cuenta en el BOM **un tubo por pieza dibujada** (más los metros totales).
-- **Montaje sobrepuesto**: opción para que el tubo quede **apoyado sobre** la
-  pared/piso/techo (no medio enterrado), desplazándolo por el normal de la
-  superficie donde se dibujó.
-- **Caja automática (RETIE)**: opción para que **tras cada N curvas** (por
-  defecto 2) la tubería **llegue a una caja**, se coloque la **terminación**
-  (conector/contratuerca + bushing normal o de aterrizaje) y **continúe** al
-  otro lado con su propia terminación — la caja **reemplaza** esa curva. La caja
-  se **monta contra la superficie** donde se dibujó el punto (pared/piso/techo),
-  con su cara ancha paralela a ella. Activable/desactivable en Ajustes.
-- **Curvas: dos modos** — se alternan **en vivo con `Alt` / `Option`**
-  (o `Ctrl` en Windows) mientras dibujas:
-  1. **Doblar tubo (curva de campo)** — la curva es parte del mismo tubo y su
-     longitud se suma a los metros de tubería. *No* genera accesorio (es la
-     razón real por la que se dobla en obra).
-  2. **Codo prefabricado** — inserta un **codo 45°/90°** como **ítem
-     independiente** del BOM y lo une con coplas.
-- **Radio de curvatura configurable**, con botón *“usar mínimo NEC”* que
-  aplica el radio mínimo del [NEC Cap. 9, Tabla 2] según la medida.
-- **Uniones correctas por tipo**:
-  - **EMT** → coplas/conectores **set-screw o a compresión** (no roscados).
-  - **IMC / Galvanizado** → **roscados** (copla roscada, y en cajas
-    **contratuerca + bushing**).
-  - **PVC** → **cementado** (copla de pegar, adaptador terminal a cajas).
-- **Terminaciones a cajas/tableros** con los accesorios correctos, incluyendo
-  **bushing normal (aislante)** o **bushing de aterrizaje (grounding)**.
-- **Cajas**:
-  - **Plexo** (cajas plásticas IP55 para intemperie / PVC).
-  - **Rawelt** (condulets tipo **C, LB, LL, LR, T, X** y cajas **FS / FD**).
-- **Conexión a cajas (snap)**: al dibujar, si pasas el cursor sobre una caja del
-  plugin, la tubería **se conecta** a ella (llega a la cara correcta con su
-  terminación). Una caja puede recibir **varias tuberías**; un tubo que atraviesa
-  la caja entra por una cara y **sale por la opuesta** (caja a cada lado de un
-  muro).
-- **Edición por anclas**: reabre cualquier tubería creada y **mueve, inserta o
-  borra vértices, extiéndela y cambia curva↔codo por vértice**; la geometría y
-  el BOM se **reconstruyen** al aplicar.
-- **BOM en vivo** con exportación a **CSV** y **HTML**, agrupado por categoría,
-  tipo y medida.
-- Barra de herramientas, menú, íconos y **Diagnóstico** propios. Todo el
-  modelado se hace dentro de una sola operación *undo-able*.
+- **El tubo se apoya en las superficies, no las atraviesa.** Cada punto recuerda
+  la(s) cara(s) sobre la(s) que se hizo clic (dos en una esquina muro/piso) y
+  todo el trazado se desplaza para quedar **sobre** muros, pisos y techos
+  (*a la vista*) o completamente **dentro** de ellos (*empotrada*). Sobre una
+  **esquina exterior** (borde de viga, columna, mesón) el vértice se separa hasta
+  que la curva libra la arista.
+- **Aviso de choques en vivo**: mientras dibujas, el tramo que atravesaría un
+  objeto se pinta en **rojo** y lo indica el texto junto al cursor.
+- **Cajas bien orientadas**: la tapa siempre mira hacia ti (aunque las caras del
+  modelo estén invertidas o dentro de grupos escalados), el fondo queda contra
+  la superficie (o empotrada al ras) y el lado largo de las conduletas sigue la
+  tubería. **Vista previa 3D** de la caja antes de colocarla y **giro de 90°**
+  con Ctrl/Option/Tab.
+- **Conexión a cajas**: pasa el cursor sobre una caja (también las de paso
+  automáticas) y la tubería llega **exactamente a su pared** con la terminación
+  correcta; un tubo que atraviesa la caja entra por una cara y sale por la otra.
+- **Perfiles de norma** — *NTC 2050 + RETIE (Colombia)*, *NEC (EE.UU.)* e
+  *IEC 60364*:
+  - **Curvas entre cajas** (NEC/NTC 358.26, 342.26, 344.26, 352.26: máx.
+    **360°**) con **cajas de paso automáticas** opcionales al superar el límite.
+  - **Ocupación de conductores** (Cap. 9 Tabla 1: 53 % / 31 % / 40 %) con
+    áreas reales de tubos (Tabla 4) y conductores THHN/THWN-2, THW (Tabla 5) o
+    H07V (IEC 60227-3), y botón de **diámetro mínimo que cumple**.
+  - **Soportes (abrazaderas)** modelados y contados: a ≤ 0.9 m de cada caja y
+    cada ≤ 3 m (EMT/IMC/RMC) o según la Tabla 352.30 (PVC).
+  - **Radio de curvatura** mínimo (Cap. 9 Tabla 2).
+  - **Código de colores** de conductores: RETIE, NEC 200.6/250.119 o IEC 60445.
+  - **Norma de producto** en la lista de materiales (RETIE 2024 Art. 2.3.29):
+    NTC 105 (EMT), NTC 169 (IMC), NTC 171 (RMC), NTC 979 (PVC), IEC 61386…
+- **Revisión normativa**: la ventana de Materiales lista, por tubería, lo que no
+  cumple (curvas > 360°, sobre-ocupación, radio menor al mínimo, tramos largos
+  sin registro en IEC) con un enlace para **verla en el modelo**.
+- **Conductores en la lista de materiales**: metros por calibre, aislamiento y
+  color (longitud del trazado + 0.2 m por caja).
+- **Inventario / tramo de stock**: cada tubo comercial se dibuja como una pieza
+  con su unión, y el conteo puede hacerse por piezas o **optimizado**.
+- **Curvas: doblar el tubo o codo prefabricado** (Ctrl/Option en vivo). Los
+  codos se cuentan por ángulo estándar (90°, 45°, 30°, 22.5°) y se marcan los
+  no estándar.
+- **Uniones correctas por tipo**: EMT set-screw o compresión; IMC/RMC
+  roscado con contratuerca + boquilla; PVC cementado con adaptador terminal.
+- **Edición por anclas**: mover, insertar, borrar, extender, cambiar el tipo de
+  ancla (curva/codo/caja) y **aplicar los ajustes actuales** (p. ej. cambiar el
+  diámetro de una tubería existente). Funciona aunque la tubería se haya movido.
+- **Panel único y claro**: norma, tubería, curvas, cajas, conductores y
+  avanzado; las opciones que no aplican se ocultan (p. ej. uniones solo en EMT).
 
 ---
 
-## 🧱 Tipos de canalización soportados
+## 🧱 Tipos de canalización
 
-| Tipo | Nombre | Unión entre tubos | Curvas | Terminación a caja |
-|------|--------|-------------------|--------|--------------------|
-| **EMT** | Tubo conduit pared delgada | Set-screw / compresión (no roscado) | Doblado en obra o codo | Conector set-screw/compresión (+ bushing opcional) |
-| **IMC** | Pared intermedia | **Roscado** | Doblado en obra o codo | **Contratuerca + bushing** |
-| **GALV / RMC** | Galvanizado pared gruesa | **Roscado** | Doblado en obra o codo | **Contratuerca + bushing** |
-| **PVC** | PVC eléctrico Sch-40 | **Cementado (pegar)** | Codo prefabricado | Adaptador terminal + contratuerca |
+| Tipo | Norma de producto | Unión | Terminación en caja | Artículo NEC/NTC |
+|------|-------------------|-------|---------------------|------------------|
+| **EMT** | NTC 105 / UL 797 | Set-screw o compresión | Conector + boquilla | 358 |
+| **IMC** | NTC 169 / UL 1242 | Roscada | Contratuerca + boquilla | 342 |
+| **RMC** (galvanizado) | NTC 171 / UL 6 | Roscada | Contratuerca + boquilla | 344 |
+| **PVC** Sch-40 | NTC 979 / UL 651 | Cementada | Adaptador terminal + contratuerca | 352 |
+| **PVC métrico** | IEC 61386-21 | Cementada | Adaptador terminal | — |
 
-Diámetros comerciales: `1/2"`, `3/4"`, `1"`, `1-1/4"`, `1-1/2"`, `2"`,
-`2-1/2"`, `3"`, `3-1/2"`, `4"`.
+Medidas comerciales `1/2"` … `4"` (Ø exteriores reales por tipo) y métricas
+Ø16 … Ø63 mm. Cajas: **estándar** (2×4", 4×4", 5×5", octagonal), **Plexo**
+(IP55) y **Rawelt** (conduletas C, LB, LL, LR, T, X y cajas FS/FD).
 
 ---
 
@@ -104,9 +97,9 @@ Diámetros comerciales: `1/2"`, `3/4"`, `1"`, `1-1/4"`, `1-1/2"`, `2"`,
 3. Selecciona el `.rbz` y confirma.
 4. Aparecerá el menú **Extensiones → SKP E-Plumb** y su **barra de herramientas**.
    Si no ves algo, usa **Extensiones → SKP E-Plumb → Diagnóstico…** para
-   comprobar la carga y abrir Ajustes.
+   comprobar la carga.
 
-> Compatible con SketchUp 2017 en adelante (usa `HtmlDialog`), probado para
+> Compatible con SketchUp 2019 en adelante (usa `HtmlDialog`), probado para
 > **SketchUp 2026** en macOS y Windows.
 
 ### Actualizaciones
@@ -118,7 +111,7 @@ Windows):
   versión y, si hay una nueva, ofrece **descargar e instalar** el `.rbz`
   automáticamente (`Sketchup.install_from_archive`) o abrir la página.
 - Un **aviso automático** (1×/día) revisa si hay novedades; se puede desactivar
-  en *Ajustes → Actualizaciones*.
+  en *Panel → Avanzado*.
 - Tras instalar una versión nueva, aparece una ventana **"Novedades"** con el
   changelog de esa versión. En **Acerca de** hay un botón **Donar con PayPal**.
 
@@ -131,113 +124,103 @@ Windows):
 
 ## 🚀 Uso rápido
 
-1. Abre **Extensiones → SKP E-Plumb → Ajustes…** y define:
-   - **Tipo** de canalización (EMT / IMC / GALV / PVC).
-   - **Diámetro** comercial.
-   - **Tramo en inventario (m)** — largo máximo por tubo.
-   - **Radio de curvatura (mm)** — o pulsa *“usar mínimo NEC”*.
-   - **Modo de curva**, **unión** (EMT), **terminación** y **caja activa**.
-   - **Caja automática (RETIE)**: actívala para que, al dibujar, se coloque la
-     caja activa tras cada N curvas.
-2. Pulsa **✏️ Dibujar tubería** (o el ícono de la barra).
-3. **Haz clic** para marcar cada punto del trazado. Puedes:
-   - Escribir una **longitud exacta** en el cuadro de medidas (VCB) y Enter.
-   - Pulsar **`Alt` / `Option`** para alternar entre **doblar tubo** y
-     **codo prefabricado** *antes de marcar cada esquina*.
-   - **Backspace** para deshacer el último punto.
-4. **Doble clic** o **Enter** para construir el tramo. El BOM se actualiza.
-5. Para **cajas**: en **Ajustes** elige la **Caja activa** (Plexo o Rawelt);
-   luego pulsa **▧ Colocar caja** y **haz clic** donde la quieras. Se monta
-   sobre la cara si haces clic en una (p. ej. una pared o un tablero), o sobre
-   el plano del piso si haces clic en espacio vacío. Cada clic coloca otra
-   caja; pulsa **Esc** para terminar.
-6. Abre **📋 Ver BOM** y expórtalo a **CSV** o **HTML**.
+1. Abre el **Panel** (ícono de engranaje) y elige la **norma**, el **tipo** y
+   **diámetro** de tubo, la **instalación** (*a la vista* o *empotrada*) y,
+   si quieres, los **conductores** del circuito (verás la ocupación en vivo).
+2. **✏️ Tubería**: haz **clic sobre muros, pisos y techos** para marcar el
+   trazado. La línea azul muestra por dónde irá realmente el tubo.
 
-### Editar una tubería existente (por anclas)
+   | Acción | Cómo |
+   |--------|------|
+   | Punto / conectar a caja | **Clic** (sobre una caja = conectar) |
+   | Crear la tubería | **Doble clic** o **Enter** |
+   | Deshacer último punto | **Retroceso** |
+   | Curva ↔ codo para la próxima esquina | **Ctrl** (Win) / **Option** (Mac) |
+   | Bloquear eje rojo / verde / azul | **→ / ← / ↑** (↓ desbloquea) |
+   | Bloquear la inferencia | mantener **Shift** |
+   | Distancia exacta | escribe la longitud y **Enter** |
+   | Más opciones (caja en el último punto…) | **clic derecho** |
 
-Pulsa **Editar tubería** y haz clic en una tubería creada con el plugin. Aparecen
-las **anclas** de su trazado:
+3. **▣ Caja**: mueve el cursor sobre una superficie — la vista previa muestra
+   la caja con la **tapa resaltada** — y haz clic. **Ctrl/Option/Tab** gira 90°;
+   clic derecho para cambiar de caja.
+4. **☰ Materiales**: lista de materiales, pestaña **Revisión normativa** y
+   exportación a **CSV** o **HTML**.
+
+### Editar una tubería existente
+
+Pulsa **✎ Editar** y haz clic en una tubería:
 
 | Acción | Cómo |
 |--------|------|
-| Mover un vértice | **Arrastra** su ancla |
-| Insertar un vértice | **Clic sobre un segmento** |
-| Extender la tubería | **Clic en espacio vacío** (se agrega al extremo más cercano) |
-| Borrar un vértice | Coloca el cursor sobre el ancla y pulsa **Retroceso/Supr** |
-| Cambiar tipo de nodo (curva → codo → caja) | Cursor sobre el ancla + **Alt / Option** (azul=curva, verde=codo, naranja=caja) |
-| Aplicar cambios | **Enter** (reconstruye geometría y BOM) |
-| Cancelar | **Esc** |
+| Mover un ancla | **Arrastra** (suéltala sobre una caja para conectarla) |
+| Insertar un ancla | **Clic sobre un segmento** |
+| Extender | **Clic fuera** del trazado (se agrega al extremo más cercano) |
+| Borrar un ancla | cursor sobre el ancla + **Retroceso/Supr** |
+| Tipo de ancla (curva → codo → caja) | cursor sobre el ancla + **Ctrl/Option** |
+| Cambiar tipo/diámetro/montaje | clic derecho → **Aplicar ajustes actuales** |
+| Aplicar | **Enter** |
 
 ---
 
-## 🧮 Cómo se calcula el BOM
+## 🧮 Cómo se calcula la lista de materiales
 
-Cada pieza modelada lleva metadatos (diccionario de atributos `SKP_E_PLUMB`).
-El BOM se **deriva del modelo**, así que si borras una tubería o un codo, el
-conteo se actualiza al regenerarlo.
+Cada pieza lleva metadatos (diccionario `SKP_E_PLUMB`) y cada tubería guarda su
+trazado, superficies, opciones, conductores y estadísticas
+(`SKP_E_PLUMB_RUN`). La lista se **deriva del modelo**.
 
-- **Tubería** — dos modos de conteo seleccionables en el diálogo del BOM:
-  - **Por tramos cortados**: cada pieza dibujada = 1 tubo.
-  - **Optimizado (recorrido total)**: suma todos los metros del mismo
-    tipo/medida en el modelo y calcula tubos = ⌈total / tramo⌉ (reutiliza
-    retazos). Siempre se muestran los metros totales.
-- **Coplas**: una **montada sobre cada empalme** entre tubos consecutivos, más
-  dos por cada codo prefabricado.
-- **Codos 45°/90°**: uno por cada curva hecha en modo *prefabricado*.
-- **Curvas de campo**: no generan accesorio; su arco se **suma a los metros**
-  de tubería.
-- **Terminaciones**: conector/contratuerca + bushing (aislante o de
-  aterrizaje) según el tipo y la opción elegida.
-- **Cajas**: una por cada caja colocada.
+- **Tubería**: por tramos dibujados (1 pieza = 1 tubo) u **optimizado**
+  (⌈metros totales / tramo⌉ por tipo y medida).
+- **Uniones**: una en cada empalme de tubos y dos por codo prefabricado.
+- **Codos**: por ángulo estándar; las **curvas de campo** suman metros de tubo.
+- **Terminaciones**: conector/contratuerca + boquilla aislante o de puesta a
+  tierra según el tipo.
+- **Soportes**: según el espaciamiento de la norma (instalación a la vista).
+- **Cajas** y **conductores** (metros por calibre/aislamiento/color).
+- Columna **Norma** con la norma de producto de cada ítem.
 
 ---
 
-## 🛠️ Compilar desde el código
+## 🛠️ Compilar y probar
 
-Requisitos: `ruby` y `zip`.
+Requisitos: `ruby` (3.x) y `zip`.
 
 ```bash
-# Genera los íconos PNG (opcional, ya vienen incluidos)
-ruby tools/make_icons.rb
-
-# Empaqueta el .rbz en dist/
-./tools/build_rbz.sh
-
-# Ejecuta las pruebas de lógica (catálogo + BOM)
-ruby tools/test_logic.rb
+ruby tools/make_icons.rb     # íconos PNG (opcional, ya vienen incluidos)
+./tools/build_rbz.sh         # empaqueta dist/SKP-E-Plumb.rbz
+ruby tools/test_logic.rb     # catálogo, normas, ocupación, BOM, geometría pura
+ruby tools/test_builder.rb   # geometría completa sobre un stub de la API de SketchUp
 ```
-
-Estructura del proyecto:
 
 ```
 skp_e_plumb.rb            # Registro de la extensión (raíz del .rbz)
 skp_e_plumb/
-  main.rb                 # Carga módulos, menús, barra de herramientas
-  catalog.rb              # Tipos, diámetros, radios NEC, accesorios, cajas
-  geom_util.rb            # Primitivas geométricas (tubos, arcos, cajas)
-  builder.rb              # Convierte el trazado en geometría + BOM
-  bom.rb                  # Motor de BOM y exportación CSV/HTML
-  settings.rb             # Preferencias persistentes
-  conduit_tool.rb         # Herramienta interactiva de tubería
-  edit_tool.rb            # Edición por anclas de tuberías existentes
-  box_tool.rb             # Herramienta de cajas
-  ui_dialogs.rb           # Diálogos HtmlDialog (Ajustes y BOM)
-  resources/icons/*.png   # Íconos de la barra de herramientas
-tools/                    # Scripts de build, íconos y pruebas
+  main.rb                 # Carga módulos, menú y barra de herramientas
+  catalog.rb              # Tipos, medidas, Ø, áreas, radios, cajas, normas de producto
+  codes.rb                # Perfiles NTC 2050+RETIE / NEC / IEC: ocupación, soportes, colores, revisión
+  geom_util.rb            # Geometría (tubos, arcos, cajas, desplazamiento sobre superficies)
+  builder.rb              # Trazado -> geometría + metadatos + estadísticas
+  picker.rb               # Superficie bajo el cursor (normales en mundo, hacia la cámara)
+  bom.rb                  # Lista de materiales, revisión normativa, CSV/HTML
+  settings.rb             # Preferencias persistentes (con migración desde 1.x)
+  conduit_tool.rb / box_tool.rb / edit_tool.rb   # Herramientas interactivas
+  ui_dialogs.rb           # Panel, Materiales, Acerca de, Novedades
+  updater.rb              # Actualización desde GitHub Releases
+tools/                    # Build, íconos, pruebas y stub de la API
 ```
 
 ---
 
-## ⚠️ Limitaciones / hoja de ruta
+## ⚠️ Limitaciones
 
-- La geometría es **representativa** (ODs reales por tipo/medida, arcos
-  segmentados). No modela roscas ni el interior hueco del tubo.
-- El conteo de tubos asume reaprovechamiento de retazos (estimación optimista);
-  el BOM muestra también los metros para que el estimador ajuste.
-- La edición por anclas reconstruye la tubería completa al aplicar (no edita
-  pieza por pieza).
-- Próximo: numeración de circuitos, longitud de conductores, cédulas por caja,
-  reporte por planta.
+- La geometría es **representativa** (Ø reales, arcos segmentados); no modela
+  roscas ni el interior del tubo.
+- La ocupación usa las tablas NEC/NTC 2050 Cap. 9; los datos IEC (tubo métrico,
+  H07V) son aproximados — verifique con el fabricante.
+- En IEC 60364 no hay un límite fijo de curvas/longitud: el perfil IEC usa una
+  **referencia práctica** (3 × 90°, 15 m entre registros).
+- La revisión no cubre capacidad de corriente, caída de tensión ni cálculo de
+  cajas (NEC 314.16); son parte del diseño eléctrico.
 
 ---
 
@@ -258,16 +241,18 @@ su desarrollo, puedes hacer una donación por PayPal — ¡gracias!
 
 ## 📖 English (summary)
 
-**SKP E-Plumb** is a SketchUp 2026 extension (macOS/Windows) to draw
-**electrical conduit** runs and generate a **Bill of Materials** that respects
-your **stock pipe length**. It supports **PVC, EMT, IMC and Galvanized/RMC**
-with correct joints (set-screw/compression for EMT, threaded for IMC/RMC,
-solvent-weld for PVC), **field bends vs. factory elbows** (toggle with
-`Alt`/`Option` while drawing), configurable **bend radius** (NEC minimums),
-**insulated and grounding bushings**, and **Plexo / Rawelt boxes**. Existing
-runs are **editable by anchors** (drag/insert/delete vertices, extend, toggle
-bend/elbow per vertex, then rebuild). Install the `.rbz` via *Extension
-Manager*. Export the BOM to CSV/HTML. Licensed under **GPL-3.0-or-later**.
+**SKP E-Plumb** is a SketchUp extension (2019+, tested for SketchUp 2026 on
+macOS/Windows) to draw **electrical conduit** runs **on** walls, floors and
+ceilings (exposed) or **inside** them (embedded) — tubes no longer cut through
+surfaces, and bends over outside corners clear the edge. Boxes face out of the
+surface they are placed on, with a live 3D preview and 90° rotation. It checks
+runs against **NTC 2050 + RETIE**, **NEC** or **IEC 60364** (360° of bends
+between pull points with optional automatic pull boxes, Chapter 9 conduit fill
+with THHN/THW/H07V conductors, support spacing, minimum bend radius, conductor
+colour codes) and produces a **Bill of Materials** with pipes per stock length,
+couplings, elbows, terminations, supports, boxes, conductors and the product
+standard of each item, plus a **code review** tab. Licensed under
+**GPL-3.0-or-later**.
 
 ---
 

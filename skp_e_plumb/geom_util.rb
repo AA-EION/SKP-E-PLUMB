@@ -162,14 +162,22 @@ module SkpEPlumb
 
     # ---- surface orientation ---------------------------------------------
     # Build an orthonormal basis for placing a box flat on a surface whose
-    # outward normal is given. Local +Z (the box depth) aligns to the normal,
-    # local +Y points "up" along the surface (world up projected), and local +X
-    # is horizontal. Pure-array maths so it can be unit tested without SketchUp.
-    # Returns [xaxis, yaxis, zaxis] as 3-element arrays.
-    def surface_basis(normal3)
+    # outward normal is given. Local +Z (the box depth) aligns to the normal.
+    # Local +X (the box's long axis) follows `xhint` projected onto the
+    # surface when given (so a conduit body lines up with its run); otherwise
+    # +Y points "up" along the surface and +X is horizontal. Pure-array maths
+    # so it can be unit tested without SketchUp. Returns [x, y, z] arrays.
+    def surface_basis(normal3, xhint = nil)
       n = norm3(normal3)
       return [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]] if n == [0.0, 0.0, 0.0]
 
+      if xhint
+        h = sub3(xhint, scale3(n, dot3(xhint, n)))
+        if len3(h) > 1.0e-6
+          x = norm3(h)
+          return [x, norm3(cross3(n, x)), n]
+        end
+      end
       up = [0.0, 0.0, 1.0]
       ref = parallel3?(n, up) ? [1.0, 0.0, 0.0] : up
       x = norm3(cross3(ref, n))
@@ -178,17 +186,53 @@ module SkpEPlumb
     end
 
     # Geom::Transformation that places a box flat on the surface at `origin`.
-    def surface_transform(origin, normal)
-      x, y, z = surface_basis([normal.x.to_f, normal.y.to_f, normal.z.to_f])
+    def surface_transform(origin, normal, xhint = nil)
+      hint = xhint && [xhint.x.to_f, xhint.y.to_f, xhint.z.to_f]
+      x, y, z = surface_basis([normal.x.to_f, normal.y.to_f, normal.z.to_f], hint)
       Geom::Transformation.axes(origin,
                                 Geom::Vector3d.new(*x),
                                 Geom::Vector3d.new(*y),
                                 Geom::Vector3d.new(*z))
     end
 
+    # Rotate a surface basis by `quarter` × 90° about its normal.
+    def rotate_basis(basis, quarter)
+      x, y, z = basis
+      (quarter.to_i % 4).times { x, y = y, scale3(x, -1.0) }
+      [x, y, z]
+    end
+
+    # Offset that moves a point lying on up to two surfaces (outward normals
+    # a and b, unit arrays or nil) so it ends `off` away from BOTH planes —
+    # i.e. the intersection of the two offset planes nearest the point. For a
+    # single surface it is simply off·a. Negative `off` goes into the surface.
+    def offset_vector(a, b, off)
+      return [0.0, 0.0, 0.0] if a.nil? && b.nil?
+      return scale3(a || b, off) if a.nil? || b.nil?
+
+      c = dot3(a, b)
+      return scale3(a, off) if c > 0.999 || c < -0.9 # same plane / opposite faces
+
+      k = off / (1.0 + c)
+      add3(scale3(a, k), scale3(b, k))
+    end
+
+    # Surface normal of the segment p->q given the candidate normals recorded
+    # at each end (arrays of unit normals). A valid normal is perpendicular to
+    # the segment; one shared by both ends wins, then either end's. nil when
+    # the segment does not run along any known surface.
+    def segment_normal(cands_p, cands_q, dir)
+      d = norm3(dir)
+      perp = ->(n) { dot3(n, d).abs < 0.05 }
+      cp = (cands_p || []).select(&perp)
+      cq = (cands_q || []).select(&perp)
+      shared = cp.find { |n| cq.any? { |m| dot3(n, m) > 0.995 } }
+      shared || cp.first || cq.first
+    end
+
     # Distance t (>0) from an interior point `c` along unit `dir` to where the
     # ray exits an axis-aligned box [mins..maxs]. Pure arrays; returns nil if no
-    # exit found. Used to find where a conduit meets a box's surface.
+    # exit found.
     def ray_box_t(c, dir, mins, maxs)
       t = nil
       3.times do |i|
@@ -212,6 +256,71 @@ module SkpEPlumb
         end
       end
       t
+    end
+
+    # Slab test: parameter t >= 0 where the ray origin + t·dir ENTERS the
+    # axis-aligned box [mins..maxs] (0 if it starts inside). nil if it misses.
+    def ray_box_enter(origin, dir, mins, maxs)
+      tmin = 0.0
+      tmax = Float::INFINITY
+      3.times do |i|
+        if dir[i].abs < 1.0e-12
+          return nil if origin[i] < mins[i] - 1.0e-9 || origin[i] > maxs[i] + 1.0e-9
+
+          next
+        end
+        t1 = (mins[i] - origin[i]) / dir[i]
+        t2 = (maxs[i] - origin[i]) / dir[i]
+        t1, t2 = t2, t1 if t1 > t2
+        tmin = t1 if t1 > tmin
+        tmax = t2 if t2 < tmax
+        return nil if tmin > tmax
+      end
+      tmin
+    end
+
+    # World-space normal of a face seen through `tr` (Geom::Transformation or
+    # nil). Uses two in-plane vectors so non-uniform scaling is handled, and
+    # optionally flips it to face `eye` (the camera) — the side you clicked is
+    # the visible one, whatever the face orientation in the model.
+    def world_normal(face_normal, tr = nil, point: nil, eye: nil)
+      n = face_normal
+      if tr
+        u, v = n.axes
+        wn = u.transform(tr) * v.transform(tr)
+        n = wn.length > 1.0e-12 ? wn.normalize : n.transform(tr)
+      end
+      return nil if n.length.zero?
+
+      n = n.normalize
+      n = n.reverse if point && eye && n.dot(eye - point) < 0
+      n
+    rescue StandardError
+      nil
+    end
+
+    def to_a3(v)
+      [v.x.to_f, v.y.to_f, v.z.to_f]
+    end
+
+    def dot3(a, b)
+      a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+    end
+
+    def add3(a, b)
+      [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+    end
+
+    def sub3(a, b)
+      [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+    end
+
+    def scale3(a, k)
+      [a[0] * k, a[1] * k, a[2] * k]
+    end
+
+    def len3(a)
+      Math.sqrt(dot3(a, a))
     end
 
     def cross3(a, b)
@@ -301,7 +410,7 @@ module SkpEPlumb
     def clean_points(pts)
       out = []
       pts.each do |p|
-        out << p if out.empty? || out.last.distance(p) > 1.0e-6
+        out << p if out.empty? || out.last.distance(p) > 1.0e-3 # SketchUp merges < 0.001"
       end
       out
     end

@@ -4,6 +4,74 @@ Todas las novedades relevantes de este proyecto se documentan aquí.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
+## [2.0.0] - 2026-09-28
+
+Auditoría completa del plugin: geometría, orientación de cajas, usabilidad y
+normas eléctricas (NTC 2050 + RETIE, NEC, IEC 60364).
+
+### Corregido
+- **Los tubos ya no atraviesan muros, pisos ni techos.** Cada punto guarda la(s)
+  cara(s) donde se hizo clic (dos en una esquina muro/piso, todas en un vértice)
+  y el trazado se desplaza por segmento para quedar **sobre** las superficies
+  (a la vista) o **dentro** de ellas (empotrada). Antes el tubo quedaba medio
+  enterrado por defecto, los puntos sobre aristas no se desplazaban y en las
+  esquinas solo se separaba de una de las dos caras.
+- **Curvas sobre esquinas exteriores** (borde de viga, mesón, columna): el
+  vértice se separa hasta que la curva libra la arista.
+- **Edición**: mover, insertar o extender anclas perdía la superficie del punto y
+  el tubo reconstruido se hundía en el muro; ahora se conserva. Una tubería
+  movida o rotada se edita donde está (antes volvía a su posición original).
+- **Orientación de las cajas**: la normal se lleva a coordenadas de mundo con
+  escala no uniforme y **siempre apunta hacia la cámara**, así la tapa mira hacia
+  afuera aunque las caras del modelo estén invertidas. Si la inferencia se
+  engancha a una arista o vértice se usa la cara visible bajo el cursor (antes
+  la caja quedaba acostada como en el piso).
+- Las cajas de paso se montan en la **superficie real** (no a un radio de
+  distancia), su lado largo sigue la tubería y en esquinas se separan del piso.
+- El tubo termina **exactamente en la pared de la caja** por la que entra
+  (antes apuntaba al centro de la caja y podía atravesarla).
+- Se puede conectar a **cajas anidadas** (p. ej. las cajas de paso automáticas).
+- El Administrador de extensiones mostraba siempre la versión **1.0.0**.
+- Los radios de curvatura estaban documentados como "Other Bends" pero son la
+  columna "One Shot and Full Shoe Benders" de la Tabla 2 (valores correctos).
+- Diámetros exteriores de **IMC** corregidos según UL 1242.
+- Alt en Windows abría la barra de menús: los cambios de modo usan
+  **Ctrl (Win) / Option (Mac)**.
+
+### Añadido
+- **Perfiles de norma**: *NTC 2050 + RETIE (Colombia)*, *NEC* e *IEC 60364*.
+- **Cajas de paso por grados de curva** (máx. 360° entre cajas, NEC/NTC
+  358.26 / 342.26 / 344.26 / 352.26), en lugar de "cada N curvas".
+- **Conductores**: circuito, sistema, calibre, aislamiento (THHN/THWN-2, THW,
+  H07V) y tierra; **ocupación del tubo en vivo** (Cap. 9 Tablas 1, 4 y 5) con
+  botón de **diámetro mínimo que cumple**; **código de colores** RETIE / NEC /
+  IEC 60445; metros de cable en la lista de materiales.
+- **Soportes (abrazaderas)** modelados y contados según 358.30 / 342.30 /
+  344.30 / Tabla 352.30.
+- **Revisión normativa** en la ventana de Materiales, con enlace "Ver en el
+  modelo", y aviso al crear/editar una tubería.
+- Columna **Norma** (norma de producto, RETIE 2024 Art. 2.3.29) en la lista y
+  exportaciones.
+- Tipo **PVC rígido métrico (IEC 61386-21)** y cajas **estándar** 2×4", 4×4",
+  5×5" y octagonal. Codos por ángulo estándar (90°, 45°, 30°, 22.5°).
+- **Herramienta de tubería**: vista previa del recorrido real, tramos que
+  chocan en **rojo**, longitud y ángulo junto al cursor, **bloqueo de eje con
+  flechas**, Shift para bloquear la inferencia y menú de **clic derecho**.
+- **Herramienta de caja**: **vista previa 3D** con la tapa resaltada, **giro de
+  90°** (Ctrl/Option/Tab o escribiendo el ángulo), instalación **empotrada** al
+  ras y menú de clic derecho para cambiar de caja.
+- **Edición**: menú de clic derecho por ancla, soltar un ancla sobre una caja
+  para conectarla, **aplicar los ajustes actuales** a una tubería (cambiar
+  tipo/diámetro/montaje) y aviso de cambios sin aplicar.
+
+### Cambiado
+- **Panel** rediseñado en secciones (Norma, Tubería, Curvas, Cajas,
+  Conductores, Avanzado) con accesos directos; se ocultan las opciones que no
+  aplican. La exportación CSV/HTML vive en la ventana de Materiales (sale del
+  menú) y el cambio curva/codo sale de la barra (sigue en el menú, el panel,
+  Ctrl/Option y el clic derecho).
+- Pruebas de geometría con un stub de la API de SketchUp en CI.
+
 ## [1.9.0] - 2026-07-24
 
 ### Añadido
