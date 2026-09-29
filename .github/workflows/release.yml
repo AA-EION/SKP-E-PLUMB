@@ -14,7 +14,7 @@ on:
       tag:
         description: 'Tag/version to release (e.g. v1.0.0)'
         required: true
-        default: 'v1.0.0'
+        default: 'v2.0.0'
 
 permissions:
   contents: write
@@ -44,4 +44,7 @@ jobs:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           name: SKP E-Plumb ${{ github.event.inputs.tag || github.ref_name }}
           files: dist/SKP-E-Plumb.rbz
-          generate_release_notes: true
+          # Release page = the .rbz + upgrade instructions only (the full
+          # changelog ships inside the plugin and shows as "Novedades").
+          body_path: .github/release-notes.md
+          generate_release_notes: false
